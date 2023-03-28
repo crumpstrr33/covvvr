@@ -82,9 +82,12 @@ class Function:
         """
         if len(x) == 1:
             if isinstance(x[0], Number):
+                # If just a single number is passed
                 return self._function(np.array([[x]]))[0][0]
             else:
-                return self._function(np.array([x]))[0]
+                # If just a single tuple of `dim` numbers are passed
+                return self._function(np.array([x[0]]))[0]
+        # If multiple args are passed
         return self._function(np.array(np.atleast_1d(*x)))
 
 
@@ -130,7 +133,10 @@ def make_func(
     fields = [(param, float, field(default=val)) for param, val in params.items()]
 
     # Create Function class then added new stuff
-    func = Function(name=name, dimension=dimension,)
+    func = Function(
+        name=name,
+        dimension=dimension,
+    )
     func.__class__ = make_dataclass(
         cname,
         fields=fields,
@@ -172,7 +178,7 @@ class NGauss(Function):
     @batchintegrand
     def _function(self, x: _x) -> NDArray[Shape["N"], Float]:
         norm_factor = 1 / (self.sigma * np.sqrt(np.pi)) ** self.dim
-        exp = -np.sum((x - 0.5) ** 2, axis=1) / self.sigma ** 2
+        exp = -np.sum((x - 0.5) ** 2, axis=1) / self.sigma**2
         return norm_factor * np.exp(exp)
 
 
@@ -218,8 +224,8 @@ class NCamel(Function):
     @batchintegrand
     def _function(self, x: _x) -> NDArray[Shape["N"], Float]:
         norm_factor = 1 / (2 * (self.sigma * np.sqrt(np.pi)) ** (self.dim))
-        exp1 = -np.sum((x - self.mu1) ** 2, axis=1) / self.sigma ** 2
-        exp2 = -np.sum((x - self.mu2) ** 2, axis=1) / self.sigma ** 2
+        exp1 = -np.sum((x - self.mu1) ** 2, axis=1) / self.sigma**2
+        exp2 = -np.sum((x - self.mu2) ** 2, axis=1) / self.sigma**2
         return norm_factor * (np.exp(exp1) + np.exp(exp2))
 
 
@@ -242,7 +248,7 @@ class NPolynomial(Function):
     @staticmethod
     @batchintegrand
     def _function(x: _x) -> NDArray[Shape["N"], Float]:
-        return np.sum(-(x ** 2) + x, axis=1)
+        return np.sum(-(x**2) + x, axis=1)
 
 
 @dataclass(repr=False)
@@ -256,13 +262,13 @@ class ScalarTopLoop(Function):
     mtsq (default 173.9**2) - Square of top quark mass
     """
 
-    s12: float = 130 ** 2
-    s23: float = -(130 ** 2) / 2
+    s12: float = 130**2
+    s23: float = -(130**2) / 2
     s1: float = 0
     s2: float = 0
     s3: float = 0
-    s4: float = 125 ** 2
-    mtsq: float = 173.9 ** 2
+    s4: float = 125**2
+    mtsq: float = 173.9**2
     dimension: int = 3
     name: str = field(default="Scalar Top Loop", init=False)
 
