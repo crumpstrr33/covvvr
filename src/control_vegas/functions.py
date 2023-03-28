@@ -29,6 +29,7 @@ import numpy as np
 from nptyping import Float, NDArray, Shape
 from vegas import batchintegrand
 
+from ._exceptions import *
 from ._types import _ftype, _x
 
 
@@ -166,7 +167,7 @@ class NGauss(Function):
     def __post_init__(self):
         super().__post_init__()
         if self.mu > 1 or self.mu < 0:
-            raise Exception(
+            raise ParameterBoundError(
                 f"Mean must be between the bounds [0, 1]. Currently set at {self.mu}."
             )
 
@@ -202,11 +203,11 @@ class NCamel(Function):
     def __post_init__(self):
         super().__post_init__()
         if self.mu1 > 1 or self.mu1 < 0:
-            raise Exception(
+            raise ParameterBoundError(
                 f"First mean must be between the bounds [0, 1]. Currently set at {self.mu1}."
             )
         if self.mu2 > 1 or self.mu2 < 0:
-            raise Exception(
+            raise ExceParameterBoundErrorption(
                 f"Second mean must be between the bounds [0, 1]. Currently set at {self.mu2}."
             )
 

@@ -1,0 +1,2 @@
+class ParameterBoundError(ValueError):
+    pass
