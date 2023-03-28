@@ -11,6 +11,12 @@ where $\rho_{f,g}$ is the correlation coefficient between $f$ and $g$. Since $|\
 
 This package uses adapted maps created by `vegas` as control variates automatically.
 
+## Installation
+To install, `numpy` and `cython` must be installed beforehand due to the `gvar` package. Therefore, for `pip`:
+```
+python -m pip install numpy Cython && pip install control-vegas
+```
+
 ## Usage
 The workflow involes creating a `Function` class and then passing that to the `CVIntegrator`. The `Function` class contains the function to be integrated but also other information such as its name, the true value of the integration (if available) and parameters of the function. The `CVIntegrator` class does the integration and stores the results like mean and variance.
 
