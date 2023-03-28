@@ -17,6 +17,7 @@ from .utilities import timing
 # Should you print out the time it takes for the main 3 functions to run?
 TIMING = False
 
+# TODO: Add a 'quick_integrate' function that forgoes creating a Function class and such
 # TODO: How to automatically choose CVs? Choose all? Every other? A smarter way?
 class CVIntegrator:
     """
@@ -293,12 +294,12 @@ class CVIntegrator:
     @property
     def var(self):
         """Variance of CV function"""
-        return self.stdev ** 2
+        return self.stdev**2
 
     @property
     def w_var(self):
         """Variance of IS function"""
-        return self.w_stdev ** 2
+        return self.w_stdev**2
 
     @property
     def mean(self):
@@ -333,7 +334,7 @@ class CVIntegrator:
             it is less than 10^-3 or greater than 10^5.
         """
         if isinstance(cutoff, int):
-            neg_co, pos_co = 10 ** (-cutoff), 10 ** cutoff
+            neg_co, pos_co = 10 ** (-cutoff), 10**cutoff
         else:
             neg_co, pos_co = 10 ** (-cutoff[0]), 10 ** cutoff[1]
         vtype = lambda x: "f" if (x > neg_co and x < pos_co) else "e"
