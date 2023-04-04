@@ -1,15 +1,27 @@
 # Control Vegas
- This package is a wrapper over the [`vegas`](https://github.com/gplepage/vegas) integration package. The control variate variance reduction method is applied to the function when integrated along with the techniques applied in `vegas` such as importance sampling. Control variates works as follows. If we have the function $f(x)$ that we want to integrate over some bounds $(a,b)$, then that is
-$$E[f]=\int_a^bf(x)\text{d}x$$
-where $E[f]$ is the expectation value of $f(X)$ where $X\sim U[a,b]$ is drawn from a uniform distribution. An equivalent integral is
-$$E[f]=\int_a^bf'(x)\text{d}x=\int_a^bf(x)-c\Big(g(x)-E[g]\Big)\text{d}x$$
-where $E[g]$ is known. If the constant $c$ is chosen to minimize the variance of $f'(x)$, then
-$$c^*=-\frac{\text{Cov}(f,g)}{\text{Var}(g)}$$
-and
-$$\text{Var}(f')=(1-\rho^2_{f,g})\text{Var}(f)$$
-where $\rho_{f,g}$ is the correlation coefficient between $f$ and $g$. Since $|\rho_{f,g}|<1$, then this choice of $c$ will always decrease the variance. The same prescription can be applied for $n$ control variates, rather than just one.
+This package is a wrapper over the [`vegas`](https://github.com/gplepage/vegas) integration package. The control variate variance reduction method is applied to the function when integrated along with the techniques applied in `vegas` such as importance sampling. To understand control variates, lets first look at how Monte carlo works.
 
-This package uses adapted maps created by `vegas` as control variates automatically.
+## Monte Carlo Basics
+For a continuous random variable $f(x)$, taking its expectation value where $x$ is drawn from some PDF $p(x)$ is
+$$E_p[f]=\int f(x)p(x)\text{d}x$$
+where the bounds on the integral are the limits of the PDF. Now, if we draw from the uniform distribution $U[a,b]$, then the PDF is $1/(b-a)$. So
+$$E_{U[a,b]}[f]=\frac{1}{b-a}\int_a^bf(x)\text{d}x\qquad\text{or}\qquad(b-a)E[f]=\int_a^bf(x)\text{d}x$$
+where the subscript on the expectation value is now assumed. Note that the left-hand side is just a normal integral. Namely, if we are looking to integrate some function $f(x)$ from $b$ to $a$, then that is equivalent to finding $(b-a)E[f]$. For $N$ discrete uniform random variables, the expectation value is just the mean:
+$$E[X]=\frac{1}{N}\sum_{i=1}^NX_i$$
+and this extends as an approximation for continuous random variables:
+$$I=\int_a^bf(x)\text{d}x\approx\frac{b-a}{N}\sum_{i=1}^Nf(x_i)$$
+where $x_i\sim U[a,b]$. Alternatively, if we consider the integral as summing up $N$ rectangles of length $(b-a)/N$, i.e. a Riemann sum, then we see that the $N$ rectangles gives an overall factor of $b-a$. The only difference between the two is one uses random variables and the breaks up the interval evenly and uses each point.
+
+## Control Variate Basics
+An equivalent integral to $I$ above is
+$$I=\int_a^bf'(x)\text{d}x=\int_a^bf(x)-c\Big(g(x)-E[g]\Big)\text{d}x\approx\frac{b-a}{N}\sum_{i=1}^Nf(x_i)-c\Big(g(x_i)-E[g]\Big)$$
+where $E[g]$ is the expectation value of $g(x)$ and is known. The constant $c$ can be chosen minimize the variance of $f'(x)$. First by finding $\text{Var}(f')$, taking the derivative with respect to $c$ and then setting it equal to zero, we find the optimal value
+$$c^\*=-\frac{\text{Cov}(f,g)}{\text{Var}(g)}$$
+and plugging in $c^*$ gives us a final variance of
+$$\text{Var}(f')=\left(1-\frac{\text{Cov}(f,g)}{\text{Var}(f)\text{Var}(g)}\right)\text{Var}(f)=(1-\rho^2_{f,g})\text{Var}(f)$$
+where $\rho_{f,g}$ is the correlation coefficient between $f$ and $g$. Since $|\rho_{f,g}|<1$, then this choice of $c$ will always decrease the variance. The same prescription can be applied for $n$ control variates, rather than just one which is used in this package.
+
+A control variate is applied by using `vegas`'s importance sampling adaptation. Since $\rho$ is larger when the functions have a linear relationship, we use these previously adapted maps as the control variates. One can specify using the $i$th iteration of `vegas` as the control variate when initializing the `CVIntegrator` class or specify a list of iterations to use for multiple control variates.
 
 ## Installation
 To install, `numpy` and `cython` must be installed beforehand due to the `gvar` package. Therefore, for `pip`:
