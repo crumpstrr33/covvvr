@@ -10,7 +10,7 @@ where the subscript on the expectation value is now assumed. Note that the left-
 $$E[X]=\frac{1}{N}\sum_{i=1}^NX_i$$
 and this extends as an approximation for continuous random variables:
 $$I=\int_a^bf(x)\text{d}x\approx\frac{b-a}{N}\sum_{i=1}^Nf(x_i)$$
-where $x_i\sim U[a,b]$. Alternatively, if we consider the integral as summing up $N$ rectangles of length $(b-a)/N$, i.e. a Riemann sum, then we see that the $N$ rectangles gives an overall factor of $b-a$. The only difference between the two is one uses random variables and the breaks up the interval evenly and uses each point.
+where $x_i\sim U[a,b]$. Alternatively, if we consider the integral as sequentially summing up $N$ rectangles of equal length $(b-a)/N$ from $a$ to $b$, i.e. a Riemann sum, then we see that the $N$ rectangles gives an overall factor of $b-a$. The only difference between the two is one uses random variables and the breaks up the interval evenly and uses each point.
 
 ## Control Variate Basics
 An equivalent integral to $I$ above is
