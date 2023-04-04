@@ -13,13 +13,13 @@ $$I=\int_a^bf(x)\text{d}x\approx\frac{b-a}{N}\sum_{i=1}^Nf(x_i)$$
 where $x_i\sim U[a,b]$. Alternatively, if we consider the integral as sequentially summing up $N$ rectangles of equal length $(b-a)/N$ from $a$ to $b$, i.e. a Riemann sum, then we see that the $N$ rectangles gives an overall factor of $b-a$. The only difference between the two is one uses random variables and the breaks up the interval evenly and uses each point.
 
 ## Control Variate Basics
-An equivalent integral to $I$ above is
-$$I=\int_a^bf'(x)\text{d}x=\int_a^bf(x)-c\Big(g(x)-E[g]\Big)\text{d}x\approx\frac{b-a}{N}\sum_{i=1}^Nf(x_i)-c\Big(g(x_i)-E[g]\Big)$$
-where $E[g]$ is the expectation value of $g(x)$ and is known. The constant $c$ can be chosen minimize the variance of $f'(x)$. First by finding $\text{Var}(f')$, taking the derivative with respect to $c$ and then setting it equal to zero, we find the optimal value
-$$c^\*=-\frac{\text{Cov}(f,g)}{\text{Var}(g)}$$
-and plugging in $c^*$ gives us a final variance of
-$$\text{Var}(f')=\left(1-\frac{\text{Cov}(f,g)}{\text{Var}(f)\text{Var}(g)}\right)\text{Var}(f)=(1-\rho^2_{f,g})\text{Var}(f)$$
-where $\rho_{f,g}$ is the correlation coefficient between $f$ and $g$. Since $|\rho_{f,g}|<1$, then this choice of $c$ will always decrease the variance. The same prescription can be applied for $n$ control variates, rather than just one which is used in this package.
+Equivalent to $I$ above is integrating $f_c(x)=f(x)+c\left(g(x)-E[g]\right)$ since $\int\left(g(x)-E[g]\right)\text{d}x=0$. So,
+$$I=\int_a^bf_c(x)\text{d}x=\int_a^bf(x)-c\Big(g(x)-E[g]\Big)\text{d}x\approx\frac{b-a}{N}\sum_{i=1}^Nf(x_i)-c\Big(g(x_i)-E[g]\Big)$$
+where the expectation value of $g(x)$, $E[g]$, is known. Note that $c$ is a free parameter to be chosen. So we choose it to minimize the variance of $f_c(x)$ first by finding $\text{Var}(f_c)$, taking the derivative with respect to $c$ and then setting it equal to zero. We find the optimal value
+$$c^\*=-\frac{\text{Cov}(f,g)}{\text{Var}(g)}\qquad\text{and}\qquad f_c^\*(x)=f(x)+c^\*\left(g(x)-E[g]\right)$$
+where the $*$ represents the optimal value. Plugging in $c^\*$ gives us a final variance of
+$$\text{Var}(f_c^\*)=\text{Var}(f)-\frac{\text{Cov}^2(f,g)}{\text{Var}(g)}=\left(1-\rho^2(f,g)\right)\text{Var}(f)\qquad\text{where}\qquad\rho(f,g)=\frac{\text{Cov}(f,g)}{\sqrt{\text{Var}(f)\text{Var}(g)}}$$
+is the correlation coefficient between $f$ and $g$. Since $|\rho(f,g)|\le1$, then this choice of $c$ will always decrease the variance. The same prescription can be applied for $n$ control variates, rather than just one, which is used in this package.
 
 A control variate is applied by using `vegas`'s importance sampling adaptation. Since $\rho$ is larger when the functions have a linear relationship, we use these previously adapted maps as the control variates. One can specify using the $i$th iteration of `vegas` as the control variate when initializing the `CVIntegrator` class or specify a list of iterations to use for multiple control variates.
 
