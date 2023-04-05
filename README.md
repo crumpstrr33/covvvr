@@ -26,7 +26,7 @@ A control variate is applied by using `vegas`'s importance sampling adaptation. 
 ## Installation
 To install, `numpy` and `cython` must be installed beforehand due to the `gvar` package. Therefore, for `pip`:
 ```
-python -m pip install numpy Cython && pip install control-vegas
+python -m pip install numpy Cython && python -m pip install control-vegas
 ```
 
 ## Usage
