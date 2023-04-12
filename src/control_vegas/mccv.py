@@ -12,7 +12,7 @@ from numpy.random import RandomState
 from vegas import Integrator
 
 from .functions import Function
-from .utilities import timing
+from .utilities import check_value, timing
 
 # Should you print out the time it takes for the main 3 functions to run?
 TIMING = False
@@ -279,39 +279,48 @@ class CVIntegrator:
         """
         self.create_maps(map_neval=map_neval)
         self.get_is_cv_values(jac_neval=jac_neval)
-        self.get_weight_prime(constant=constant)
+        if self.cv_values:
+            # only run if we are using control variates
+            self.get_weight_prime(constant=constant)
 
     @property
+    @check_value
     def stdev(self):
         """Standard deviation of CV function"""
         return np.std(self.weight_prime) / np.sqrt(self.jac_neval)
 
     @property
+    @check_value
     def w_stdev(self):
         """Standard deviation of IS function"""
         return np.std(self.weight_value) / np.sqrt(self.jac_neval)
 
     @property
+    @check_value
     def var(self):
         """Variance of CV function"""
         return self.stdev**2
 
     @property
+    @check_value
     def w_var(self):
         """Variance of IS function"""
         return self.w_stdev**2
 
     @property
+    @check_value
     def mean(self):
         """Mean of CV function"""
         return np.mean(self.weight_prime)
 
     @property
+    @check_value
     def w_mean(self):
         """Mean of IS function"""
         return np.mean(self.weight_value)
 
     @property
+    @check_value
     def vpr(self):
         """
         Variance percentage reduction, i.e. by what percent was the variance
@@ -337,7 +346,7 @@ class CVIntegrator:
             neg_co, pos_co = 10 ** (-cutoff), 10**cutoff
         else:
             neg_co, pos_co = 10 ** (-cutoff[0]), 10 ** cutoff[1]
-        vtype = lambda x: "f" if (x > neg_co and x < pos_co) else "e"
+        vtype = lambda x: "f" if (np.isnan(x) or (x > neg_co and x < pos_co)) else "e"
         w_mean = f"{self.w_mean:.{rounding}{vtype(self.w_mean)}}"
         w_var = f"{self.w_var:.{rounding}{vtype(self.w_var)}}"
         w_stdev = f"{self.w_stdev:.{rounding}{vtype(self.w_stdev)}}"
@@ -346,7 +355,9 @@ class CVIntegrator:
         stdev = f"{self.stdev:.{rounding}{vtype(self.stdev)}}"
         vpr = f"{100 * self.vpr:.{rounding}{vtype(100 * self.vpr)}}%"
 
-        print(f"         |{'No CVs':^{8 + rounding}}|{'With CVs':^{8 + rounding}}")
+        plural = "s" if len(self.cv_nitn) > 1 else ""
+        titles = f"No CV{plural}", f"With CV{plural}"
+        print(f"{9*' '}|{titles[0]:^{8 + rounding}}|{titles[1]:^{8 + rounding}}")
         print(f"---------+{'-'*(8 + rounding)}+{'-'*(8 + rounding)}")
         print(f"Mean     |{w_mean:>{7 + rounding}} |{mean:>{7 + rounding}}")
         print(f"Variance |{w_var:>{7 + rounding}} |{var:>{7 + rounding}}")

@@ -27,6 +27,21 @@ def timing(active: bool = True):
     return decorator
 
 
+def check_value(f):
+    """
+    Decorator to return nan if there is no value otherwise. Used for the properties
+    of CVIntegrator being passed as numbers, e.g. in self.compare.
+    """
+
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except AttributeError:
+            return np.nan
+
+    return wrapper
+
+
 def save(
     name: str,
     savedir: str = "",
