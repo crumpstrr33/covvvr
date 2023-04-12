@@ -1,3 +1,6 @@
+"""
+Custom types for type hinting 
+"""
 from typing import Callable
 
 from nptyping import Float, NDArray, Shape

@@ -1,8 +1,13 @@
+"""
+Wrappers and functions used in different parts of the code.
+"""
 import pickle
 from datetime import datetime as dt
 from pathlib import Path
 
 import numpy as np
+
+from ._exceptions import ParameterBoundError
 
 
 def timing(active: bool = True):
@@ -11,11 +16,11 @@ def timing(active: bool = True):
     def decorator(f):
         def wrapper(*args, **kwargs):
             if active:
-                t0 = dt.now()
+                dt0 = dt.now()
                 output = f(*args, **kwargs)
-                t1 = dt.now()
+                dt1 = dt.now()
                 print(
-                    f"{f.__name__}: {(t1 - t0).total_seconds():>{30 - len(f.__name__)}.3f}s"
+                    f"{f.__name__}: {(dt1 - dt0).total_seconds():>{30 - len(f.__name__)}.3f}s"
                 )
             else:
                 output = f(*args, **kwargs)
@@ -72,8 +77,8 @@ def save(
     parents (default 0) - Which parent directory to save in. If 0, saves in same directory
         as this file. If 1, saves in parent directory. If 2, saves in grandparent
         directory. And so on.
-    overwrite (default False) - If a file with the same path and file name exists, 
-        overwrite it if `overwrite=True`. Otherwise, append `_1` to the end of the 
+    overwrite (default False) - If a file with the same path and file name exists,
+        overwrite it if `overwrite=True`. Otherwise, append `_1` to the end of the
         file. If that is already taken, then append `_2` instead. And so on, until
         a unique number is found.
     dryrun (default False) - If True, will not save anything but only print out where
@@ -91,10 +96,10 @@ def save(
     if parents > 0:
         try:
             path = path.parents[parents - 1]
-        except IndexError:
-            raise f"There is no grand^{parents}parent folder. for {path}."  # type: ignore
+        except IndexError as error:
+            raise f"There is no grand^{parents}parent folder. for {path}." from error
     elif parents != 0:
-        raise f"`parents` must equal a nonnegative int but here it is {parents}."  # type: ignore
+        raise f"`parents` must equal a nonnegative int but here, it is {parents}." from ParameterBoundError
     path = path / savedir
     path.mkdir(parents=True, exist_ok=True)
 
@@ -102,7 +107,7 @@ def save(
     if (path / (name + f".{stype}")).is_file() and not overwrite:
         print(
             "File of the same name already exists. Delete file or "
-            + f"set `overwrite` to `True`. Saving with appended integer."
+            + "set `overwrite` to `True`. Saving with appended integer."
         )
         ind = 1
         while True:
@@ -120,5 +125,5 @@ def save(
         if stype == "npz":
             np.savez(path / name, **files)
         elif stype == "pkl":
-            with open(f"{path / name}.pkl", "wb") as f:
-                pickle.dump(files, f)
+            with open(f"{path / name}.pkl", "wb") as savefile:
+                pickle.dump(files, savefile)

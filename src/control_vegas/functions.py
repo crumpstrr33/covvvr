@@ -29,7 +29,7 @@ import numpy as np
 from nptyping import Float, NDArray, Shape
 from vegas import batchintegrand
 
-from ._exceptions import *
+from ._exceptions import ParameterBoundError
 from ._types import _ftype, _x
 
 
@@ -93,6 +93,7 @@ class Function:
 
 
 # TODO: Allow passing function being nonvectorized
+# TODO: Use np.vectorize or is that too slow?
 def make_func(
     cname: str,
     dimension: int,
@@ -167,9 +168,7 @@ class NGauss(Function):
     def __post_init__(self):
         super().__post_init__()
         if self.mu > 1 or self.mu < 0:
-            raise ParameterBoundError(
-                f"Mean must be between the bounds [0, 1]. Currently set at {self.mu}."
-            )
+            raise f"Mean must be between the bounds [0, 1]. Currently set at {self.mu}." from ParameterBoundError
 
         self.true_value = (
             (erf((1 - self.mu) / self.sigma) + erf(self.mu / self.sigma)) / 2
@@ -203,13 +202,9 @@ class NCamel(Function):
     def __post_init__(self):
         super().__post_init__()
         if self.mu1 > 1 or self.mu1 < 0:
-            raise ParameterBoundError(
-                f"First mean must be between the bounds [0, 1]. Currently set at {self.mu1}."
-            )
+            raise f"First mean must be between the bounds [0, 1]. Currently set at {self.mu1}." from ParameterBoundError
         if self.mu2 > 1 or self.mu2 < 0:
-            raise ExceParameterBoundErrorption(
-                f"Second mean must be between the bounds [0, 1]. Currently set at {self.mu2}."
-            )
+            raise f"Second mean must be between the bounds [0, 1]. Currently set at {self.mu2}." from ParameterBoundError
 
         self.true_value = (
             (
