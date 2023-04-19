@@ -92,8 +92,7 @@ class Function:
         return self._function(np.array(np.atleast_1d(*x)))
 
 
-# TODO: Allow passing function being nonvectorized
-# TODO: Use np.vectorize or is that too slow?
+# TODO: Allow passing function being nonvectorized, use np.vectorize or too slow?
 def make_func(
     cname: str,
     dimension: int,

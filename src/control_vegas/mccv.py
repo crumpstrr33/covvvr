@@ -86,7 +86,6 @@ def quick_integrate(
     return cvi
 
 
-# TODO: Add a 'quick_integrate' function that forgoes creating a Function class and such
 # TODO: Automatically choose single CV: find the variance dip
 class CVIntegrator:
     """
