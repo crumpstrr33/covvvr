@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "control-vegas"
-version = "1.0"
+version = "1.1.0"
 description = "A Control Variate wrapper over the vegas python package."
 authors = [
     {name = "Jacob Scott", email = "jscott137@pm.me"}
 ]
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 dependencies = [
     "numpy>=1.24",
@@ -20,6 +20,7 @@ dependencies = [
 keywords = ["Monte Carlo", "vegas", "control variates", "integration"]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
