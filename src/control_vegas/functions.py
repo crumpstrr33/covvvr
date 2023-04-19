@@ -26,11 +26,10 @@ from numbers import Number
 from typing import Optional, Sequence, Union
 
 import numpy as np
-from nptyping import Float, NDArray, Shape
 from vegas import batchintegrand
 
 from ._exceptions import ParameterBoundError
-from ._types import _ftype, _x
+from ._types import _f, _ftype, _x
 
 
 # TODO: add getters and setters?
@@ -69,13 +68,14 @@ class Function:
         ]
         return f"{type(self).__name__}({', '.join(parameters)})"
 
-    def _function(self, x: _x) -> NDArray[Shape["N, Dim"], Float]:
+    def _function(self, x: _x) -> _f:
         """
-        Function to be called by Vegas's batch integration. Defined by inheriting classes.
+        Function to be called by Vegas's batch integration. Defined by inheriting
+        classes.
         """
-        return x
+        pass
 
-    def function(self, *x: Union[float, Sequence[float]]) -> NDArray[Shape["N"], Float]:
+    def function(self, *x: Union[float, Sequence[float]]) -> _f:
         """
         A wrapper around self._f that allows for easier manual use. Just supply however
         many data points to evaluate as individual arguments and this method will
@@ -100,30 +100,31 @@ def make_func(
     function: _ftype,
     name: Optional[str] = None,
     **params: float,
-):
+) -> Function:
     """
     Create your own dataclass function. The function provided must be vectorized.
-    If the integral is n dimensional, then the input to `f` is (..., n) dimensional where ...
-    is a variable amount representing how many points are being evaluated simultaneously.
-    The callable `f` to be passed is the function to be integrated. Since batchintegration is
-    being used from Vegas, this function must be vectorized. So the one dimensional function,
-    `def f(x): return x**2 + 1`, would become:
+    If the integral is n dimensional, then the input to `f` is (..., n) dimensional
+    where ... is a variable amount representing how many points are being evaluated
+    simultaneously. The callable `f` to be passed is the function to be integrated.
+    Since batchintegration is being used from Vegas, this function must be vectorized.
+    So the one dimensional function, `def f(x): return x**2 + 1`, would become:
 
                 def f(x):
                     return x[:, 0]**2 + 1
 
-    using Numpy array slicing. For an n-dimensional integrand, one can reference the ith variable
-    with x[:, i]. Or if all variables are being summed together (like for the exponent of a
-    n-dimensional Gaussian), one can use `np.sum(x, axis=1)`. More information on this and an
-    example can be found in the file docstring of this file: functions.py. Also supply
-    keyword arguments for the parameters that may be used in `f`.
+    using Numpy array slicing. For an n-dimensional integrand, one can reference the ith
+    variable with x[:, i]. Or if all variables are being summed together (like for the
+    exponent of a n-dimensional Gaussian), one can use `np.sum(x, axis=1)`. More
+    information on this and an example can be found in the file docstring of this file:
+    functions.py. Also supply keyword arguments for the parameters that may be used in
+    `f`.
 
     Parameters:
     cname - The class name
     dimension - The dimension of the integral
     f - The function, must be vectorized. See above.
-    name (default None) - The spaced, capitalized name for the function. If not given, will
-        just use whatever `cname` is.
+    name (default None) - The spaced, capitalized name for the function. If not given,
+        will just use whatever `cname` is.
     params - Function parameters
 
     Returns (
@@ -168,7 +169,9 @@ class NGauss(Function):
     def __post_init__(self):
         super().__post_init__()
         if self.mu > 1 or self.mu < 0:
-            raise f"Mean must be between the bounds [0, 1]. Currently set at {self.mu}." from ParameterBoundError
+            raise """
+                Mean must be between the bounds [0, 1]. Currently set at {self.mu}.
+            """ from ParameterBoundError
 
         self.true_value = (
             (erf((1 - self.mu) / self.sigma) + erf(self.mu / self.sigma)) / 2
@@ -176,7 +179,7 @@ class NGauss(Function):
         self.name = self.name.format(self.dim)
 
     @batchintegrand
-    def _function(self, x: _x) -> NDArray[Shape["N"], Float]:
+    def _function(self, x: _x) -> _f:
         norm_factor = 1 / (self.sigma * np.sqrt(np.pi)) ** self.dim
         exp = -np.sum((x - 0.5) ** 2, axis=1) / self.sigma**2
         return norm_factor * np.exp(exp)
@@ -202,9 +205,13 @@ class NCamel(Function):
     def __post_init__(self):
         super().__post_init__()
         if self.mu1 > 1 or self.mu1 < 0:
-            raise f"First mean must be between the bounds [0, 1]. Currently set at {self.mu1}." from ParameterBoundError
+            raise f"""
+                First mean must be between [0, 1]. Currently set at {self.mu1}.
+            """ from ParameterBoundError
         if self.mu2 > 1 or self.mu2 < 0:
-            raise f"Second mean must be between the bounds [0, 1]. Currently set at {self.mu2}." from ParameterBoundError
+            raise f"""
+                Second mean must be between [0, 1]. Currently set at {self.mu2}.
+            """ from ParameterBoundError
 
         self.true_value = (
             (
@@ -218,7 +225,7 @@ class NCamel(Function):
         self.name = self.name.format(self.dim)
 
     @batchintegrand
-    def _function(self, x: _x) -> NDArray[Shape["N"], Float]:
+    def _function(self, x: _x) -> _f:
         norm_factor = 1 / (2 * (self.sigma * np.sqrt(np.pi)) ** (self.dim))
         exp1 = -np.sum((x - self.mu1) ** 2, axis=1) / self.sigma**2
         exp2 = -np.sum((x - self.mu2) ** 2, axis=1) / self.sigma**2
@@ -243,7 +250,7 @@ class NPolynomial(Function):
 
     @staticmethod
     @batchintegrand
-    def _function(x: _x) -> NDArray[Shape["N"], Float]:
+    def _function(x: _x) -> _f:
         return np.sum(-(x**2) + x, axis=1)
 
 
@@ -289,7 +296,7 @@ class ScalarTopLoop(Function):
         return 1 / self._Fbox(x, s12, s23, s1, s2, s3, s4) ** 2
 
     @batchintegrand
-    def _function(self, x: _x) -> NDArray[Shape["N"], Float]:
+    def _function(self, x: _x) -> _f:
         return (
             self._Sbox(x, self.s12, self.s23, self.s1, self.s2, self.s3, self.s4)
             + self._Sbox(x, self.s23, self.s12, self.s2, self.s3, self.s4, self.s1)
