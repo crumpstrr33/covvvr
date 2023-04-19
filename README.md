@@ -77,8 +77,8 @@ wpoly = make_func('WeightedPoly', dimension=2, function=f, name='Weighted Polyno
 # Print out parameters of class (note `true_value` isn't shown)
 print(wpoly, '\n')
 
-# Create integrator class and use the 20th iteration as the control  variate
-cvi = CVIntegrator(wpoly, evals=1000, tot_iters=50, cv_iters=20)
+# Create integrator class and use multiple control variates
+cvi = CVIntegrator(wpoly, evals=1000, tot_iters=50, cv_iters=[10, 15, 20, 25, 30, 35])
 # Run the integration
 cvi.integrate()
 
@@ -87,16 +87,50 @@ cvi.compare(rounding=5)
 ```
 which outputs
 ```
-WeightedPoly(dimension=2, name=WeightedPoly, a=0.3, b=0.6) 
+WeightedPoly(dimension=2, name=Weighted Polynomial, a=0.3, b=0.6) 
 
-         |     No CVs     |    With CVs    
----------+----------------+----------------
-Mean     |     0.39996303 |     0.39993278
-Variance | 5.27324871e-09 | 4.86145624e-09
-St Dev   | 7.26171379e-05 | 6.97241439e-05
-VPR      |                |    7.80908493%
+         |   No CVs    |  With CVs   
+---------+-------------+-------------
+Mean     |     0.39984 |     0.40004
+Variance | 5.83781e-08 | 4.90241e-08
+St Dev   | 2.41616e-04 | 2.21414e-04
+VPR      |             |   16.02309%
 ```
 The reason the function is vectorized is because, on the backend, `vegas`'s `batchintegrand` is used which can greatly speed up the computation.
+
+### Be lazy!
+If you're rushed or lazy, you can use the `quick_integrate` function that does the steps above for you and returns the `CVIntegrator` object. So to run the previous code block, you would use
+```python
+cvi = quick_integrate(
+         function=f,
+         evals=1000,
+         tot_iters=50,
+         bounds=[(0, 1), (0, 1)],
+         cv_iters=20,
+         cname="WeightPoly",
+         name="Weighted Polynomial",
+         a=0.3, b=0.6
+)
+cvi.compare()
+```
+which outputs
+```
+         |  No CVs   | With CVs  
+---------+-----------+-----------
+Mean     |     0.400 |     0.400
+Variance | 5.826e-08 | 5.025e-08
+St Dev   | 2.414e-04 | 2.242e-04
+VPR      |           |   13.746%
+```
+Note that the arguments are `cname` and `name` are optional but `bounds` is not. The dimension of the integral is implied from `bounds` when using `quick_integrate` whereas it's taken from the `Function` class for the previous code blocks.
+
+### Specifying Control Variate Iterations
+There are multiple valid arguments that can be passed to `cv_iters` for both the `CVIntegrator` class and `quick_integrate` which we'll lay out here.
+- For using one control variate, pass a integer representing the iteration to use.
+- For multiple control variates, pass a list of integers representing the iterations to use.
+- The string 'all' will use every iteration.
+- The string `all%n` will use every iteration mod $n$. So if you specify `tot_iters=15` and `cv_iters='all%3'`, then then the iterations used will be `[3, 6, 9, 12]`
+- This can be shifted by instead using `all%n+b` where $b$ is the shift. So for `tot_iters=15` and `cv_iters='all%3+2'`, you'll get `[2, 5, 8, 11, 14]`.
 
 ### Manual Use of `Function` Class
 To access the function call, use `function` or `f`. So, using the second example, I can run
@@ -107,4 +141,4 @@ wpoly.f([0.2, 1], [0.8, 0.8], [1, 2]) # returns array([0.612, 0.672, 1.5  ])
 This wraps around the private, vectorized `_function`/`_f` used by `vegas` so you don't have to worry about the proper `numpy` array shape
 
 ## Notes
-- By default, functions are integrated from 0 to 1.
+- By default, functions are integrated from 0 to 1 unless `quick_integrate` is used.
