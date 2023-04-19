@@ -109,15 +109,21 @@ def make_func(
     Since batchintegration is being used from Vegas, this function must be vectorized.
     So the one dimensional function, `def f(x): return x**2 + 1`, would become:
 
-                def f(x):
+                def f(self, x):
                     return x[:, 0]**2 + 1
 
-    using Numpy array slicing. For an n-dimensional integrand, one can reference the ith
-    variable with x[:, i]. Or if all variables are being summed together (like for the
-    exponent of a n-dimensional Gaussian), one can use `np.sum(x, axis=1)`. More
-    information on this and an example can be found in the file docstring of this file:
-    functions.py. Also supply keyword arguments for the parameters that may be used in
-    `f`.
+    using Numpy array slicing (the `self` is also necessary since this is a class
+    method). For an n-dimensional integrand, one can reference the ith variable with
+    x[:, i]. Or if all variables are being summed together (like for the exponent of a
+    n-dimensional Gaussian), one can use `np.sum(x, axis=1)`. More information on this
+    and an example can be found in the file docstring of this file, functions.py.
+    Also keyword arguments for the parameters that may be used in `f`. For example,
+    if we pass to this method a=3, then we can write
+
+                def f(self, x):
+                    return self.a * (x[:, 0]**2 * x[:, 1] + 1)
+
+    to parameterize it.
 
     Parameters:
     cname - The class name

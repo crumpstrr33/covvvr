@@ -4,6 +4,8 @@ File that holds the CVIntegrator class
 
 from copy import deepcopy
 from itertools import product
+from numbers import Number
+from re import findall
 from typing import Optional, Sequence, Union
 
 import numpy as np
@@ -11,15 +13,81 @@ from nptyping import Float, NDArray, Shape
 from numpy.random import RandomState
 from vegas import Integrator
 
-from .functions import Function
+from ._types import _ftype
+from .functions import Function, make_func
 from .utilities import check_value, timing
 
 # Should you print out the time it takes for the main 3 functions to run?
 TIMING = False
 
 
+def quick_integrate(
+    function: _ftype,
+    evals: int,
+    tot_iters: int,
+    bounds: Union[Sequence[tuple[float, float]], tuple[float, float]],
+    cv_iters: Optional[Union[list[int], int, str]] = None,
+    cv_means: Union[float, Sequence[float]] = 1,
+    rng: Optional[RandomState] = None,
+    cname: str = None,
+    name: str = None,
+    **params: float,
+):
+    """
+    A convenience method if you don't want to create a custom Function class via
+    make_func. This method will do it for you, pass the class to the CVIntegrator and
+    run the integrate method, passing back the CVIntegrator.
+
+    Parameters:
+    function - The function to be integrated. Must be vectorized, see the docstring for
+        make_func for more info (from control_vegas import make_func).
+    evals - Number of Vegas evaluations per iteration (called `neval` by Vegas). This
+        is the default value used by create_maps, get_is_cv_values but those can be
+        specified separately.
+    tot_iters - Total number of iterations for Vegas to do (called `nitn` by Vegas).
+    bounds - The bounds of the integration for each dimension given as a list of tuples.
+        The CVIntegrator class uses the dimension from the Function class so that the
+        bounds argument is optional. But here it is opposite, the dimension of the
+        function is implied from the number of bounds.
+    cv_iters - List of iterations to use as CVs. See the docstring for CVIntegrator
+        for more information about the options. Most simply can be an integer
+        representing a single CV or a list of integers representing multiple.
+    cv_means (default 1) - The value of E[g_i] but by the scheme laid out in
+        `get_is_cv_values` to obtain the control variate, E[g_i] should be approximately
+        one.
+    rng (default None) - The Numpy Randomstate to use. If None, will create a new
+        one.
+    cname (default None) - The name of the class of the Function passed to CVIntegrator.
+        If not specified, the __name__ attribute of `function` is passed capitalized.
+    name (default None) - The name attribute of the Function. If not specified,
+        the __name__ attribute is passed as is.
+    params - Parameters for the function.
+    """
+    # make Function object
+    function = make_func(
+        cname=function.__name__.capitalize() if cname is None else cname,
+        dimension=len(bounds),
+        function=function,
+        name=function.__name__ if name is None else name,
+        **params,
+    )
+    # Create integrator object
+    cvi = CVIntegrator(
+        function=function,
+        evals=evals,
+        tot_iters=tot_iters,
+        bounds=bounds,
+        cv_iters=cv_iters,
+        cv_means=cv_means,
+        rng=rng,
+    )
+    # And integrate
+    cvi.integrate()
+    return cvi
+
+
 # TODO: Add a 'quick_integrate' function that forgoes creating a Function class and such
-# TODO: How to automatically choose CVs? Choose all? Every other? A smarter way?
+# TODO: Automatically choose single CV: find the variance dip
 class CVIntegrator:
     """
     Integrating a function f, we can equivalently integrate f'=f + c(g +E[g]) where the
@@ -51,7 +119,7 @@ class CVIntegrator:
         evals: int,
         tot_iters: int,
         bounds: Optional[Sequence[tuple[float, float]]] = None,
-        cv_iters: Optional[Union[list[int], int]] = None,
+        cv_iters: Optional[Union[list[int], int, str]] = None,
         cv_means: Union[float, Sequence[float]] = 1,
         rng: Optional[RandomState] = None,
     ):
@@ -67,9 +135,14 @@ class CVIntegrator:
         tot_iters - Total number of iterations for Vegas to do (called `nitn` by Vegas).
         bounds (default None) - The bounds of the integration for each dimension. If not
             given, defaults to [0, 1] for every dimension.
-        cv_iters (default []) - List of iterations to use as CVs. Defaults to no CVs.
+        cv_iters (default None) - List of iterations to use as CVs. Defaults to no CVs.
             Can be passed as a single integer which is considered as a single control
-            variate.
+            variate. Can also be passed as a string:
+                - 'all': Use every iteration as a control variate.
+                - 'all%n': Use every iteration mod n. For example, if tot_iters=10
+                    and cv_iters='all%2', then it uses [2, 4, 6, 8]
+                - 'all%n+b': Use every iteration (shifted by b) mod n. For example, if
+                    tot_iters=10 and cv_iters='all%2+1', then use [1, 3, 5, 7, 9]
         cv_means (default 1) - The value of E[g_i] but by the scheme laid out in
             `get_is_cv_values` to obtain the control variate, E[g_i] should be
             approximately one.
@@ -80,6 +153,7 @@ class CVIntegrator:
         self.bounds = self.function.dim * [[0, 1]] if bounds is None else bounds
         self.neval = evals
         self.nitn = tot_iters
+
         self.cv_nitn = cv_iters
         # Create empty list if not specified, i.e. no control variates
         if self.cv_nitn is None:
@@ -87,13 +161,27 @@ class CVIntegrator:
         # If cv_iters is a number, put it into a list
         if isinstance(self.cv_nitn, int):
             self.cv_nitn = [self.cv_nitn]
+        if isinstance(self.cv_nitn, str):
+            # Find the mod and shift using regex
+            all_str = findall(r"^all%(\d+)(?:\+(\d+))?$", self.cv_nitn)
+            if all_str:
+                # Extract those parameters (0 shift if not specified)
+                mod = int(all_str[0][0])
+                shift = 0 if not all_str[0][1] else int(all_str[0][1])
+                # Create list according to those numbers
+                shifted_cv_nitns = np.where(np.arange(self.nitn) % mod == 0)[0] + shift
+                self.cv_nitn = list(shifted_cv_nitns[shifted_cv_nitns < self.nitn])
+            elif self.cv_nitn == "all":
+                self.cv_nitn = list(range(1, self.nitn))
+
         # Iteration 0 is no iteration at all, so remove it
         if 0 in self.cv_nitn:
             self.cv_nitn.remove(0)
+
         self.num_cvs = len(self.cv_nitn)
         self.cv_means = cv_means
         # A number implies a constant mean value
-        if isinstance(self.cv_means, (float, int)):
+        if isinstance(self.cv_means, Number):
             self.cv_means = self.num_cvs * [cv_means]
 
         self.rng = RandomState() if rng is None else rng
