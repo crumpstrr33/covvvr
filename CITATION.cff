@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: Control Vegas
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Jacob
+    family-names: Scott
+    email: jscott137@pm.me
+    affiliation: University of Kansas
+repository-code: 'https://github.com/crumpstrr33/control-vegas'
+abstract: >-
+  A wrapper package applying the control variates variance
+  reduction technique on top of the vegas algorithm for
+  Monte Carlo integration.
+keywords:
+  - Monte Carlo
+  - variance reduction
+  - vegas
+  - python
+license: GPL-3.0+
+commit: 6b9660c
+version: 1.1.0
+date-released: '2023-04-19'
