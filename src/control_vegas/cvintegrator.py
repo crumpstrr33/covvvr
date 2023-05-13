@@ -427,8 +427,6 @@ class CVIntegrator:
         self.w_stdev
         self.w_mean
 
-        if memory == "max":
-            pass
         # Large arrays not used in anything
         if memory in {"large", "medium", "tiny"}:
             self._delete("xs", "is_jac")

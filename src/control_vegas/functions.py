@@ -265,7 +265,7 @@ class ScalarTopLoop(Function):
     A one-loop scalar box integral.
 
     Parameters:
-    s12, s23, s1, s2, s3, s4 (defaults 130**2, -130**2/, 0, 0, 0, 125**) =
+    s12, s23, s1, s2, s3, s4 (defaults 130**2, -130**2, 0, 0, 0, 125**2) =
         Parameters of function
     mtsq (default 173.9**2) - Square of top quark mass
     """
