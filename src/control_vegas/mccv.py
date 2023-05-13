@@ -6,6 +6,7 @@ from copy import deepcopy
 from itertools import product
 from numbers import Number
 from re import findall
+from sys import getsizeof
 from typing import Optional, Sequence, Union
 
 import numpy as np
@@ -15,10 +16,7 @@ from vegas import Integrator
 
 from ._types import _ftype
 from .functions import Function, make_func
-from .utilities import check_value, timing
-
-# Should you print out the time it takes for the main 3 functions to run?
-TIMING = False
+from .utilities import check_attrs, timing
 
 
 def quick_integrate(
@@ -112,6 +110,11 @@ class CVIntegrator:
             map.
     """
 
+    # Should you print out the time it takes for the main 3 functions to run?
+    TIMING = False
+    # Memory threshold for when `memory="tiny"`
+    TINY_THRESHOLD = 100
+
     def __init__(
         self,
         function: Function,
@@ -121,6 +124,7 @@ class CVIntegrator:
         cv_iters: Optional[Union[list[int], int, str]] = None,
         cv_means: Union[float, Sequence[float]] = 1,
         rng: Optional[RandomState] = None,
+        memory: str = "medium",
     ):
         """
         Takes in a Function class object from functions.py. One can make their own using
@@ -147,7 +151,15 @@ class CVIntegrator:
             approximately one.
         rng (default None) - The Numpy Randomstate to use. If None, will create a new
             one.
+        memory (default 'medium') - Either 'low', 'medium', 'large' or `max. Determines
+            what is saved. If `max`, save everything. If `large, don't save self.xs
+            and self.is_jac. If 'medium', additionally don't save self.weight_value and
+            self.weight_prime. If 'tiny', remove everything below the threshold
+            TINY_TRESHOLD.
         """
+        # Initialize private attributes for the properties
+        self._init_results()
+
         self.function = function
         self.bounds = self.function.dim * [[0, 1]] if bounds is None else bounds
         self.neval = evals
@@ -184,6 +196,13 @@ class CVIntegrator:
             self.cv_means = self.num_cvs * [cv_means]
 
         self.rng = RandomState() if rng is None else rng
+        self.memory = memory
+
+    def _init_results(self):
+        """Initializes the private attributes for the listed properties."""
+        for name, obj in self.__class__.__dict__.items():
+            if isinstance(obj, property):
+                self.__setattr__(f"_{name}", np.nan)
 
     @timing(active=TIMING)
     def create_maps(self, map_neval: Optional[int] = None) -> None:
@@ -245,22 +264,26 @@ class CVIntegrator:
         ys = self.rng.uniform(0, 1, (self.jac_neval, self.function.dim))
         # Find the Jacobian. If by importance sampling we transform f -> f/p, then
         # the Jacobian is 1/p
-        self.xs = np.empty(ys.shape, float)
+        xs = np.empty(ys.shape, float)
         is_jac = np.empty(ys.shape[0], float)
-        self._is_map.map(ys, self.xs, is_jac)
-
+        self._is_map.map(ys, xs, is_jac)
         # The IS values
-        self.weight_value = is_jac * self.function._f(self.xs)
+        self.weight_value = is_jac * self.function._f(xs)
 
         # Find the Jacobian(s) for the CV(s)
-        self.cv_values = []
+        self.cv_values, self.cv_jacs = [], []
         for cv_map in self._cv_maps:
             # Use inverse map for control variate to find CV Jacobian
-            t_inv = np.empty(self.xs.shape, float)
-            cv_jac = np.empty(self.xs.shape[0], float)
-            cv_map.invmap(self.xs, t_inv, cv_jac)
+            t_inv = np.empty(xs.shape, float)
+            cv_jac = np.empty(xs.shape[0], float)
+            cv_map.invmap(xs, t_inv, cv_jac)
 
             self.cv_values.append(is_jac / cv_jac)
+            self.cv_jacs.append(cv_jac)
+
+        if self.memory == "max":
+            self.xs = xs
+            self.is_jac = is_jac
 
     @timing(active=TIMING)
     def get_weight_prime(self, constant: bool = True) -> None:
@@ -357,7 +380,7 @@ class CVIntegrator:
         self,
         map_neval: Optional[int] = None,
         jac_neval: Optional[int] = None,
-        constant: bool = False,
+        constant: bool = True,
     ) -> None:
         """
         Runs the necessary functions to integrate the function in the order:
@@ -373,7 +396,7 @@ class CVIntegrator:
         jac_neval (default None) - From self.get_is_cv_values docstring: The number of
             steps to split up `ys`, the unit hypercube, into. Defaults to
             `self.tot_neval`, the total number of iterations used when adapting the map.
-        constant (default False) - From self.get_weight_primes: Since the ith value of a
+        constant (default True) - From self.get_weight_primes: Since the ith value of a
             control variate can be slightly correlated to its coefficient, we can remove
             said value to calculate the variance/covariance (and therefore the
             coefficient). Thus we can have different values (albeit similar ones) for
@@ -385,51 +408,95 @@ class CVIntegrator:
         if self.cv_values:
             # only run if we are using control variates
             self.get_weight_prime(constant=constant)
+        self.garbage_collect()
+
+    def garbage_collect(self, memory: Optional[str] = None) -> None:
+        """
+        Deletes attributes depending on choices of self.memory to clear up memory.
+
+        Parameters:
+        memory (default None) - A measure of how many attributes to delete to clear up
+            memory. Can be 'max', 'large', 'medium' or 'tiny'. More info in the class
+            __init__ docstring.
+        """
+        memory = memory or self.memory
+
+        # Initialize properties so result is saved before deleting arrays they need
+        self.stdev
+        self.mean
+        self.w_stdev
+        self.w_mean
+
+        if memory == "max":
+            pass
+        # Large arrays not used in anything
+        if memory in {"large", "medium", "tiny"}:
+            self._delete("xs", "is_jac")
+        # Large arrays but used in properties below
+        if memory in {"medium", "tiny"}:
+            self._delete("weight_prime", "weight_value")
+        # All bigger than a certain threshold
+        if memory == "tiny":
+            attr_items = list(self.__dict__.items())
+            for attr, attr_val in attr_items:
+                if getsizeof(attr_val) > self.TINY_THRESHOLD:
+                    self.__delattr__(attr)
+
+    def _delete(self, *attrs):
+        """Delete attribute if it still exists as one."""
+        for attr in attrs:
+            if attr in self.__dir__():
+                self.__delattr__(attr)
 
     @property
-    @check_value
+    @check_attrs("weight_prime", "jac_neval")
     def stdev(self) -> float:
         """Standard deviation of CV function"""
-        return np.std(self.weight_prime) / np.sqrt(self.jac_neval)
+        self._stdev = np.std(self.weight_prime) / np.sqrt(self.jac_neval)
+        return self._stdev
 
     @property
-    @check_value
+    @check_attrs("weight_value", "jac_neval")
     def w_stdev(self) -> float:
         """Standard deviation of IS function"""
-        return np.std(self.weight_value) / np.sqrt(self.jac_neval)
+        self._w_stdev = np.std(self.weight_value) / np.sqrt(self.jac_neval)
+        return self._w_stdev
 
     @property
-    @check_value
+    @check_attrs("stdev")
     def var(self) -> float:
         """Variance of CV function"""
-        return self.stdev**2
+        self._var = self.stdev**2
+        return self._var
 
     @property
-    @check_value
     def w_var(self) -> float:
         """Variance of IS function"""
-        return self.w_stdev**2
+        self._w_var = self.w_stdev**2
+        return self._w_var
 
     @property
-    @check_value
+    @check_attrs("weight_prime")
     def mean(self) -> float:
         """Mean of CV function"""
-        return np.mean(self.weight_prime)
+        self._mean = np.mean(self.weight_prime)
+        return self._mean
 
     @property
-    @check_value
+    @check_attrs("weight_value")
     def w_mean(self) -> float:
         """Mean of IS function"""
-        return np.mean(self.weight_value)
+        self._w_mean = np.mean(self.weight_value)
+        return self._w_mean
 
     @property
-    @check_value
     def vpr(self) -> float:
         """
         Variance percentage reduction, i.e. by what percent was the variance
         reduced due to the CVs.
         """
-        return 1 - self.var / self.w_var
+        self._vpr = 1 - self.var / self.w_var
+        return self._vpr
 
     def compare(
         self, rounding: int = 3, cutoff: Union[int, tuple[int, int]] = 3
