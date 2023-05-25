@@ -24,9 +24,9 @@ is the correlation coefficient between $f$ and $g$. Since $|\rho(f,g)|\le1$, the
 A control variate is applied by using `vegas`'s importance sampling adaptation. Since $\rho$ is larger when the functions have a linear relationship, we use these previously adapted maps as the control variates. One can specify using the $i$th iteration of `vegas` as the control variate when initializing the `CVIntegrator` class or specify a list of iterations to use for multiple control variates.
 
 ## Installation
-To install, `numpy` and `cython` must be installed beforehand due to the `gvar` package. Therefore, for `pip`:
+It can just be installed via `pip`:
 ```
-python -m pip install numpy Cython && python -m pip install control-vegas
+python -m pip install control-vegas
 ```
 
 ## Usage
