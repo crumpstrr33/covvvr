@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "control-vegas"
-version = "1.2.0"
+version = "1.3.0"
 description = "A Control Variate wrapper over the vegas python package."
 authors = [
     {name = "Jacob Scott", email = "jscott137@pm.me"}
@@ -37,8 +37,6 @@ dev = [
     "twine",
     "black",
     "isort",
-    "jupyterlab",
-    "jupyterlab_code_formatter"
 ]
 
 [project.urls]
