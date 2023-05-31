@@ -174,9 +174,9 @@ class NGauss(Function):
     def __post_init__(self):
         super().__post_init__()
         if self.mu > 1 or self.mu < 0:
-            raise """
-                Mean must be between the bounds [0, 1]. Currently set at {self.mu}.
-            """ from ParameterBoundError
+            raise ParameterBoundError(
+                f"Mean must be between the bounds [0, 1]. Currently set at {self.mu}."
+            ) from None
 
         self.true_value = (
             (erf((1 - self.mu) / self.sigma) + erf(self.mu / self.sigma)) / 2
@@ -210,13 +210,13 @@ class NCamel(Function):
     def __post_init__(self):
         super().__post_init__()
         if self.mu1 > 1 or self.mu1 < 0:
-            raise f"""
-                First mean must be between [0, 1]. Currently set at {self.mu1}.
-            """ from ParameterBoundError
+            raise ParameterBoundError(
+                f"First mean must be between [0, 1]. Currently set at {self.mu1}."
+            ) from None
         if self.mu2 > 1 or self.mu2 < 0:
-            raise f"""
-                Second mean must be between [0, 1]. Currently set at {self.mu2}.
-            """ from ParameterBoundError
+            raise ParameterBoundError(
+                f"Second mean must be between [0, 1]. Currently set at {self.mu2}."
+            ) from None
 
         self.true_value = (
             (
@@ -238,31 +238,86 @@ class NCamel(Function):
 
 
 @dataclass(repr=False)
-class NPolynomial(Function):
+class EntangledCircles(Function):
     """
-    N-dimensional Polynomial of the form: sum of -x_i^2 + x_i.
+    A function of two shifted circles. True value depends on default values.
 
     Parameters:
-    dimension - Dimension of Polynomial
+    p1, p2 (defaults 0.4, 0.6) - Shifts of the two variables
+    r (default 0.25) - Radius
+    w, a (default 1/0.004, 3)
     """
 
-    name: str = field(default="{}D Polynomial", init=False)
+    p1: float = 0.4
+    p2: float = 0.6
+    r: float = 0.25
+    w: float = 1 / 0.004
+    a: float = 3
+    dimension: int = field(default=2, init=False)
+    name: str = field(default="Entangled Circles", init=False)
 
     def __post_init__(self):
         super().__post_init__()
-        self.true_value = self.dim / 6
-        self.name = self.name.format(self.dim)
+        self.true_value = 0.01368
 
-    @staticmethod
     @batchintegrand
-    def _function(x: _x) -> _f:
-        return np.sum(-(x**2) + x, axis=1)
+    def _function(self, x: _x) -> _f:
+        x1 = x[:, 0]
+        x2 = x[:, 1]
+        exp1 = np.exp(
+            -self.w * abs((x2 - self.p2) ** 2 + (x1 - self.p1) ** 2 - self.r**2)
+        )
+        exp2 = np.exp(
+            -self.w
+            * abs((x2 - 1 + self.p2) ** 2 + (x1 - 1 + self.p1) ** 2 - self.r**2)
+        )
+        return x2**self.a * exp1 + (1 - x2) ** self.a * exp2
+
+
+@dataclass(repr=False)
+class AnnulusWCuts(Function):
+    """
+    An annulus with hard cuts
+
+    Parameters:
+    rmin - Radius of inner circle
+    rmax - Radius of outer circle
+    """
+
+    rmin: float = 0.2
+    rmax: float = 0.45
+    dimension: int = field(default=2, init=False)
+    name: str = field(default="Annulus with Cuts", init=False)
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.rminsq = self.rmin**2
+        self.rmaxsq = self.rmax**2
+        if self.rmin < 0:
+            raise ParameterBoundError(
+                f"Minimum radius must be positive. Currently set at {self.rmin}."
+            ) from None
+        if self.rmax < 0:
+            raise ParameterBoundError(
+                f"Maximum radius must be positive. Currently set at {self.rmax}."
+            ) from None
+        if self.rmin > self.rmax:
+            raise ParameterBoundError(
+                "Minimum radius must be less than maximum radius but they are "
+                + f"{self.rmin} and {self.rmax} currently."
+            ) from None
+        self.true_value = np.pi / 4 * (self.rmax**2 - self.rmin**2)
+
+    @batchintegrand
+    def _function(self, x: _x) -> _f:
+        dist = x[:, 0] ** 2 + x[:, 1] ** 2
+        return np.logical_and(dist > self.rminsq, dist < self.rmaxsq).astype(float)
 
 
 @dataclass(repr=False)
 class ScalarTopLoop(Function):
     """
-    A one-loop scalar box integral.
+    A one-loop scalar box integral. True value depends on default values.
 
     Parameters:
     s12, s23, s1, s2, s3, s4 (defaults 130**2, -130**2, 0, 0, 0, 125**2) =
@@ -277,7 +332,7 @@ class ScalarTopLoop(Function):
     s3: float = 0
     s4: float = 125**2
     mtsq: float = 173.9**2
-    dimension: int = 3
+    dimension: int = field(default=3, init=False)
     name: str = field(default="Scalar Top Loop", init=False)
 
     def __post_init__(self):
@@ -308,3 +363,25 @@ class ScalarTopLoop(Function):
             + self._Sbox(x, self.s12, self.s23, self.s3, self.s4, self.s1, self.s2)
             + self._Sbox(x, self.s23, self.s12, self.s4, self.s1, self.s2, self.s3)
         )
+
+
+@dataclass(repr=False)
+class NPolynomial(Function):
+    """
+    N-dimensional Polynomial of the form: sum of -x_i^2 + x_i.
+
+    Parameters:
+    dimension - Dimension of Polynomial
+    """
+
+    name: str = field(default="{}D Polynomial", init=False)
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.true_value = self.dim / 6
+        self.name = self.name.format(self.dim)
+
+    @staticmethod
+    @batchintegrand
+    def _function(x: _x) -> _f:
+        return np.sum(-(x**2) + x, axis=1)
