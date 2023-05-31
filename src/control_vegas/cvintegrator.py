@@ -15,8 +15,8 @@ from numpy.random import RandomState
 from vegas import Integrator
 
 from ._types import _ftype
+from ._wrappers import check_attrs, timing
 from .functions import Function, make_func
-from .utilities import check_attrs, timing
 
 
 def quick_integrate(
