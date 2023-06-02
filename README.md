@@ -1,4 +1,4 @@
-# Control Vegas
+# Congas: Control Variates in Vegas
 This package is a wrapper over the [`vegas`](https://github.com/gplepage/vegas) integration package. The control variate variance reduction method is applied to the function when integrated along with the techniques applied in `vegas` such as importance sampling. To understand control variates, lets first look at how Monte carlo works.
 
 ## Monte Carlo Basics
