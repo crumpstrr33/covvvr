@@ -3,9 +3,9 @@ requires = ["setuptools", "setuptools.scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "control-vegas"
+name = "congas"
 version = "1.3.0"
-description = "A Control Variate wrapper over the vegas python package."
+description = "A (Con)trol Variate wrapper over the ve(gas) python package."
 authors = [
     {name = "Jacob Scott", email = "jscott137@pm.me"}
 ]
@@ -40,4 +40,4 @@ dev = [
 ]
 
 [project.urls]
-Github = "https://github.com/crumpstrr33/control-vegas"
+Github = "https://github.com/crumpstrr33/congas"
