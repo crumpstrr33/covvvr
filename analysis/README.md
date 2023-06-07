@@ -1,0 +1,1 @@
+This directory contains files used in the analysis done and plots shown in the paper. The variance reduction heatmaps are created in `plots.ipynb` by importing the `2cv_*.npz` files from the `data` directory. These files are created by `calc_percdiff.py` in the `scripts` directory.
