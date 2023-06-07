@@ -35,8 +35,8 @@ The workflow involes creating a `Function` class and then passing that to the `C
 ### Using a Built-In Function
 For example,
 ```python
-from control_vegas import CVIntegrator
-from control_vegas.functions import NGauss
+from covvvr import CVIntegrator
+from covvvr.functions import NGauss
 
 # Create 16-dimensional Gaussian
 ng = NGauss(16)
@@ -66,7 +66,7 @@ VPR      |             |   15.22696%
 ### Adding Your Own Function
 The `make_func` function allows you to make your own `Function` subclass. As an example, lets say $f(x_1,x_2)=ax_1^2+bx_2^2$ is a 2-dimensional function we want to integrate. Then we can do that by
 ```python
-from control_vegas import CVIntegrator, make_func
+from covvvr import CVIntegrator, make_func
 
 # Create function, note that it is vetorized using Numpy slicing
 def f(self, x):
