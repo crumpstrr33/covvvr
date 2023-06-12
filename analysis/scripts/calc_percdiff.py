@@ -9,8 +9,8 @@ from multiprocessing.pool import Pool
 
 import numpy as np
 from constants import DATA_DIR
-from control_vegas import CVIntegrator
-from control_vegas.functions import ScalarTopLoop
+from covvvr import CVIntegrator
+from covvvr.functions import ScalarTopLoop
 from my_favorite_things import save
 
 
