@@ -306,7 +306,7 @@ class AnnulusWCuts(Function):
                 "Minimum radius must be less than maximum radius but they are "
                 + f"{self.rmin} and {self.rmax} currently."
             ) from None
-        self.true_value = np.pi / 4 * (self.rmax**2 - self.rmin**2)
+        self.true_value = np.pi / 4 * (self.rmaxsq - self.rminsq)
 
     @batchintegrand
     def _function(self, x: _x) -> _f:
