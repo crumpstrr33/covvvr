@@ -1,7 +1,7 @@
 """
-Calculates the variance percentage reduction as defined by the `vpr` property
+Calculates the variance percentage reduction as defined by the `vrp` property
 of the `CVIntegrator` class for every pair of possible CVs given a total
-number of iterations. It also calculates the VPR for every single CV.
+number of iterations. It also calculates the VRP for every single CV.
 """
 from datetime import datetime as dt
 from itertools import combinations
@@ -26,7 +26,7 @@ def time_units(time_val):
     return time_val, unit
 
 
-class CalcVPR:
+class CalcVRP:
     """
     Calculate the percent reduction in variances for every possible pair of
     two control variates.
@@ -71,7 +71,7 @@ class CalcVPR:
         cvi.integrate()
         return (
             cv_nitn,
-            cvi.vpr,
+            cvi.vrp,
             cvi.var,
             np.corrcoef(cvi.weight_value, cvi.cv_values[0])[0, 1],
         )
@@ -99,12 +99,12 @@ class CalcVPR:
             rng=rng,
         )
         cvi.integrate()
-        return cv_nitns, cvi.vpr
+        return cv_nitns, cvi.vrp
 
     def calc(self):
         """
         returns (
-            2D array representing the VPRs for every pair of 2 CVs,
+            2D array representing the VRPs for every pair of 2 CVs,
             Array of variances for each choice of 1 CV,
             Correlation coefficient for each choice of 1 CV with IS function
         )
@@ -124,8 +124,8 @@ class CalcVPR:
             end="",
         )
         t0 = dt.now()
-        for cv_nitn, vpr, var, rho in Pool().map(self._diag, range(1, self.nitn)):
-            perc_diff[cv_nitn - 1, cv_nitn - 1] = vpr
+        for cv_nitn, vrp, var, rho in Pool().map(self._diag, range(1, self.nitn)):
+            perc_diff[cv_nitn - 1, cv_nitn - 1] = vrp
             variances[cv_nitn - 1] = var
             corrcoefs[cv_nitn - 1] = rho
 
@@ -145,12 +145,12 @@ class CalcVPR:
             end="",
         )
         t0 = dt.now()
-        for cv_nitns, vpr in Pool().map(
+        for cv_nitns, vrp in Pool().map(
             self._off_diag, combinations(range(1, self.nitn), r=2)
         ):
             # Heatmap is symmetric
-            perc_diff[cv_nitns[0] - 1, cv_nitns[1] - 1] = vpr
-            perc_diff[cv_nitns[1] - 1, cv_nitns[0] - 1] = vpr
+            perc_diff[cv_nitns[0] - 1, cv_nitns[1] - 1] = vrp
+            perc_diff[cv_nitns[1] - 1, cv_nitns[0] - 1] = vrp
         t1 = dt.now()
         tot_t, unit = time_units((t1 - t0).total_seconds())
         print(
@@ -180,8 +180,8 @@ if __name__ == "__main__":
     for n in range(N):
         # run it
         print(f"{name}: {n + 1:>4,}/{N:,}", flush=True)
-        calcvpr = CalcVPR(func, nitn, neval)
-        perc_diff, variances, corrcoefs = calcvpr.calc()
+        calcvrp = CalcVRP(func, nitn, neval)
+        perc_diff, variances, corrcoefs = calcvrp.calc()
         perc_diffs.append(perc_diff)
         variancess.append(variances)
         corrcoefss.append(corrcoefs)

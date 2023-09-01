@@ -3,14 +3,8 @@ from datetime import datetime as dt
 import numpy as np
 from constants import DATA_DIR
 from covvvr import CVIntegrator
-from covvvr.functions import (
-    AnnulusWCuts,
-    EntangledCircles,
-    NCamel,
-    NGauss,
-    NPolynomial,
-    ScalarTopLoop,
-)
+from covvvr.functions import (AnnulusWCuts, EntangledCircles, NCamel, NGauss,
+                              NPolynomial, ScalarTopLoop)
 from my_favorite_things import format_ddict, nested_ddict, save
 
 FUNCTIONS = (
@@ -54,7 +48,7 @@ def run(func, cv_iters, iters, evts, rng):
 
     if not cv_iters:
         return cvi.w_var, tot_time, cvi.w_mean
-    return cvi.var, cvi.vpr, tot_time, cvi.mean
+    return cvi.var, cvi.vrp, tot_time, cvi.mean
 
 
 def run_0cv(func, iters, evts, rng):
@@ -78,7 +72,7 @@ if __name__ == "__main__":
     evts = 5000
     iters = 50
 
-    vprs = nested_ddict(1, list)
+    vrps = nested_ddict(1, list)
     variances = nested_ddict(1, list)
     times = nested_ddict(1, list)
     means = nested_ddict(1, list)
@@ -117,9 +111,9 @@ if __name__ == "__main__":
             )
 
             # Run for 1 CV
-            var, vpr, time, mean = run_1cv(func, max_1cv, iters, evts, rng)
+            var, vrp, time, mean = run_1cv(func, max_1cv, iters, evts, rng)
             variances[func.name][1].append(var)
-            vprs[func.name][1].append(vpr)
+            vrps[func.name][1].append(vrp)
             times[func.name][1].append(time)
             means[func.name][1].append(mean)
             print(
@@ -128,9 +122,9 @@ if __name__ == "__main__":
             )
 
             # Run for 2 CVs
-            var, vpr, time, mean = run_2cv(func, max_2cv, iters, evts, rng)
+            var, vrp, time, mean = run_2cv(func, max_2cv, iters, evts, rng)
             variances[func.name][2].append(var)
-            vprs[func.name][2].append(vpr)
+            vrps[func.name][2].append(vrp)
             times[func.name][2].append(time)
             means[func.name][2].append(mean)
             print(
@@ -139,9 +133,9 @@ if __name__ == "__main__":
             )
 
             # Run for all CVs
-            var, vpr, time, mean = run_allcv(func, iters, evts, rng)
+            var, vrp, time, mean = run_allcv(func, iters, evts, rng)
             variances[func.name]["all"].append(var)
-            vprs[func.name]["all"].append(vpr)
+            vrps[func.name]["all"].append(vrp)
             times[func.name]["all"].append(time)
             means[func.name]["all"].append(mean)
             print(
@@ -150,7 +144,7 @@ if __name__ == "__main__":
             )
 
     variances = format_ddict(variances)
-    vprs = format_ddict(vprs)
+    vrps = format_ddict(vrps)
     times = format_ddict(times)
 
     print()
@@ -161,7 +155,7 @@ if __name__ == "__main__":
         absolute=True,
         stype="pkl",
         variances=variances,
-        vprs=vprs,
+        vrps=vrps,
         times=times,
         metadata=metadata,
     )

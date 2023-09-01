@@ -488,13 +488,13 @@ class CVIntegrator:
         return self._w_mean
 
     @property
-    def vpr(self) -> float:
+    def vrp(self) -> float:
         """
         Variance percentage reduction, i.e. by what percent was the variance
         reduced due to the CVs.
         """
-        self._vpr = 1 - self.var / self.w_var
-        return self._vpr
+        self._vrp = 1 - self.var / self.w_var
+        return self._vrp
 
     def compare(
         self, rounding: int = 3, cutoff: Union[int, tuple[int, int]] = 3
@@ -528,7 +528,7 @@ class CVIntegrator:
         mean = f"{self.mean:.{rounding}{vtype(self.mean)}}"
         var = f"{self.var:.{rounding}{vtype(self.var)}}"
         stdev = f"{self.stdev:.{rounding}{vtype(self.stdev)}}"
-        vpr = f"{100 * self.vpr:.{rounding}{vtype(100 * self.vpr)}}%"
+        vrp = f"{100 * self.vrp:.{rounding}{vtype(100 * self.vrp)}}%"
 
         plural = "s" if len(self.cv_nitn) > 1 else ""
         titles = f"No CV{plural}", f"With CV{plural}"
@@ -537,4 +537,4 @@ class CVIntegrator:
         print(f"Mean     |{w_mean:>{7 + rounding}} |{mean:>{7 + rounding}}")
         print(f"Variance |{w_var:>{7 + rounding}} |{var:>{7 + rounding}}")
         print(f"St Dev   |{w_stdev:>{7 + rounding}} |{stdev:>{7 + rounding}}")
-        print(f"VPR      |{' ' * (7 + rounding)} |{vpr:>{7 + rounding}}")
+        print(f"VRP      |{' ' * (7 + rounding)} |{vrp:>{7 + rounding}}")
