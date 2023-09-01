@@ -170,7 +170,7 @@ class CVIntegrator:
         if self.cv_nitn is None:
             self.cv_nitn = []
         # If cv_iters is a number, put it into a list
-        if isinstance(self.cv_nitn, int):
+        if isinstance(self.cv_nitn, (int, np.integer)):
             self.cv_nitn = [self.cv_nitn]
         if isinstance(self.cv_nitn, str):
             # Find the mod and shift using regex
