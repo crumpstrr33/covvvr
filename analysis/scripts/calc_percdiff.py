@@ -1,5 +1,5 @@
 """
-Calculates the variance percentage reduction as defined by the `vrp` property
+Calculates the variance reduction in percentage as defined by the `vrp` property
 of the `CVIntegrator` class for every pair of possible CVs given a total
 number of iterations. It also calculates the VRP for every single CV.
 """

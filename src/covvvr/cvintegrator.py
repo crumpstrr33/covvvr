@@ -490,7 +490,7 @@ class CVIntegrator:
     @property
     def vrp(self) -> float:
         """
-        Variance percentage reduction, i.e. by what percent was the variance
+        Variance reduction in percentage, i.e. by what percent was the variance
         reduced due to the CVs.
         """
         self._vrp = 1 - self.var / self.w_var

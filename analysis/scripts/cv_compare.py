@@ -17,7 +17,7 @@ FUNCTIONS = (
 
 def find_max_cvs(name, iters, evts, N):
     """
-    Finds the which CVs give the maximum variance reduction for 1CV and 2CVs from the
+    Finds which CVs give the maximum variance reduction for 1CV and 2CVs from the
     2CV data. The file is found by the given arguments.
 
     Parameters:
