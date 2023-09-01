@@ -1,10 +1,21 @@
+"""
+This file uses the data created by calc_percdiff.py to get the 1 CV and 2CV that
+minimizes the variance. It runs the integrator for each function a number of times and
+saves that data.
+"""
 from datetime import datetime as dt
 
 import numpy as np
 from constants import DATA_DIR
 from covvvr import CVIntegrator
-from covvvr.functions import (AnnulusWCuts, EntangledCircles, NCamel, NGauss,
-                              NPolynomial, ScalarTopLoop)
+from covvvr.functions import (
+    AnnulusWCuts,
+    EntangledCircles,
+    NCamel,
+    NGauss,
+    NPolynomial,
+    ScalarTopLoop,
+)
 from my_favorite_things import format_ddict, nested_ddict, save
 
 FUNCTIONS = (
@@ -39,6 +50,9 @@ def find_max_cvs(name, iters, evts, N):
 
 
 def run(func, cv_iters, iters, evts, rng):
+    """
+    Runs the integrator and returns data.
+    """
     t0 = dt.now()
     cvi = CVIntegrator(func, evals=evts, tot_iters=iters, cv_iters=cv_iters, rng=rng)
     cvi.integrate()
@@ -85,6 +99,7 @@ if __name__ == "__main__":
     metadata["true_values"] = []
     metadata["dims"] = []
 
+    # Cycle through all the functions
     for func in FUNCTIONS:
         f_pre = f"{func.name}"
         print(f"Function: {f_pre} | ", end="", flush=True)
@@ -97,6 +112,7 @@ if __name__ == "__main__":
 
         max_1cv, max_2cv = find_max_cvs(func.name, iters, evts, N)
         print(f"Found max CVs: {max_1cv} and {max_2cv}", flush=True)
+        # Run N times to take the average
         for n in range(N):
             n_pre = f"{n + 1:>{len(str(N))}}/{N}"
             print(f"\tRunning {n_pre}...", flush=True)
