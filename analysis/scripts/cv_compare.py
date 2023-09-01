@@ -6,24 +6,9 @@ saves that data.
 from datetime import datetime as dt
 
 import numpy as np
-from constants import DATA_DIR
+from constants import DATA_DIR, FUNCTIONS
 from covvvr import CVIntegrator
-from covvvr.functions import (
-    AnnulusWCuts,
-    EntangledCircles,
-    NCamel,
-    NGauss,
-    NPolynomial,
-    ScalarTopLoop,
-)
 from my_favorite_things import format_ddict, nested_ddict, save
-
-FUNCTIONS = (
-    [NGauss(d) for d in [2, 4, 8, 16]]
-    + [NCamel(d) for d in [2, 4, 8, 16]]
-    + [EntangledCircles(), AnnulusWCuts(), ScalarTopLoop()]
-    + [NPolynomial(d) for d in [18, 54, 96]]
-)
 
 
 def find_max_cvs(name, iters, evts, N):
