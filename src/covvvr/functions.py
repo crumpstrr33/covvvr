@@ -331,7 +331,7 @@ class ScalarTopLoop(Function):
     s2: float = 0
     s3: float = 0
     s4: float = 125**2
-    mtsq: float = 173.9**2
+    mtsq: float = 175**2
     dimension: int = field(default=3, init=False)
     name: str = field(default="Scalar Top Loop", init=False)
 
