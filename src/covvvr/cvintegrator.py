@@ -19,7 +19,7 @@ from ._wrappers import check_attrs, timing
 from .functions import Function, make_func
 
 
-def quick_integrate(
+def classic_integrate(
     function: _ftype,
     evals: int,
     tot_iters: int,
