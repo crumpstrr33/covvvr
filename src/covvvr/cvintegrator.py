@@ -202,7 +202,7 @@ class CVIntegrator:
             if isinstance(obj, property):
                 self.__setattr__(f"_{name}", np.nan)
 
-    @timing(active=TIMING)
+    @timing
     def create_maps(self, map_neval: Optional[int] = None) -> None:
         """
         Creates the maps corresponding to the adapted function, f, and the
@@ -249,7 +249,7 @@ class CVIntegrator:
             self._is_map = deepcopy(integrator.map)
             self.tot_neval += int(result.sum_neval)
 
-    @timing(active=TIMING)
+    @timing
     def get_is_cv_values(self, jac_neval: Optional[int] = None) -> None:
         """
         Calculates the adapted function and the control variates from their maps.
@@ -287,7 +287,7 @@ class CVIntegrator:
             self.xs = xs
             self.is_jac = is_jac
 
-    @timing(active=TIMING)
+    @timing
     def get_weight_prime(self, constant: bool = True) -> None:
         """
         Calculates the final CV function by finding the optimal coefficients

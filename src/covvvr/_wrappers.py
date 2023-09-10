@@ -4,25 +4,20 @@ Wrappers and functions used in different parts of the code.
 from datetime import datetime as dt
 
 
-def timing(active: bool = True):
-    """Decorator for timing with option to turn it off"""
+def timing(func):
+    def wrapper(self, *args, **kwargs):
+        if self.TIMING:
+            dt0 = dt.now()
+            output = func(self, *args, **kwargs)
+            dt1 = dt.now()
+            tot_time = (dt1 - dt0).total_seconds()
+            fname = func.__name__
+            print(f"{fname} {'-' * (30 - len(fname))} {tot_time:.5f}s")
+        output = func(self, *args, **kwargs)
 
-    def decorator(func):
-        def wrapper(inst, *args, **kwargs):
-            if active:
-                dt0 = dt.now()
-                output = func(*args, **kwargs)
-                dt1 = dt.now()
-                tot_time = (dt1 - dt0).total_seconds()
-                print(f"{func.__name__}: {tot_time:>{30 - len(func.__name__)}.3f}s")
-            else:
-                output = func(inst, *args, **kwargs)
+        return output
 
-            return output
-
-        return wrapper
-
-    return decorator
+    return wrapper
 
 
 def check_attrs(*attrs):
