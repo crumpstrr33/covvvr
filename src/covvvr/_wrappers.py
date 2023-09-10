@@ -13,7 +13,8 @@ def timing(func):
             tot_time = (dt1 - dt0).total_seconds()
             fname = func.__name__
             print(f"{fname} {'-' * (30 - len(fname))} {tot_time:.5f}s")
-        output = func(self, *args, **kwargs)
+        else:
+            output = func(self, *args, **kwargs)
 
         return output
 
