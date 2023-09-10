@@ -26,7 +26,6 @@ def classic_integrate(
     bounds: Union[Sequence[tuple[float, float]], tuple[float, float]],
     cv_iters: Optional[Union[list[int], int, str]] = None,
     cv_means: Union[float, Sequence[float]] = 1,
-    rng: Optional[RandomState] = None,
     cname: str = None,
     name: str = None,
     **params: float,
@@ -53,8 +52,6 @@ def classic_integrate(
     cv_means (default 1) - The value of E[g_i] but by the scheme laid out in
         `get_is_cv_values` to obtain the control variate, E[g_i] should be approximately
         one.
-    rng (default None) - The Numpy Randomstate to use. If None, will create a new
-        one.
     cname (default None) - The name of the class of the Function passed to CVIntegrator.
         If not specified, the __name__ attribute of `function` is passed capitalized.
     name (default None) - The name attribute of the Function. If not specified,
@@ -77,14 +74,12 @@ def classic_integrate(
         bounds=bounds,
         cv_iters=cv_iters,
         cv_means=cv_means,
-        rng=rng,
     )
     # And integrate
     cvi.integrate()
     return cvi
 
 
-# TODO: Automatically choose single CV: find the variance dip
 class CVIntegrator:
     """
     Integrating a function f, we can equivalently integrate f'=f + c(g +E[g]) where the
@@ -123,7 +118,7 @@ class CVIntegrator:
         bounds: Optional[Sequence[tuple[float, float]]] = None,
         cv_iters: Optional[Union[list[int], int, str]] = None,
         cv_means: Union[float, Sequence[float]] = 1,
-        rng: Optional[RandomState] = None,
+        rng_seed: Optional[int] = None,
         memory: str = "medium",
     ):
         """
@@ -131,7 +126,7 @@ class CVIntegrator:
         the make_func function found in that file.
 
         Parameters:
-        f - Function class with f to integrate.
+        function - Function class with f to integrate.
         evals - Number of Vegas evaluations per iteration (called `neval` by Vegas).
             This is the default value used by create_maps, get_is_cv_values but those
             can be specified separately.
@@ -149,8 +144,11 @@ class CVIntegrator:
         cv_means (default 1) - The value of E[g_i] but by the scheme laid out in
             `get_is_cv_values` to obtain the control variate, E[g_i] should be
             approximately one.
-        rng (default None) - The Numpy Randomstate to use. If None, will create a new
-            one.
+        rng_seed (default None) - The seed to use for the numpy RandomState class.
+            Useful for testing with the same numbers. Note: vegas's Integrator does
+            not have a seed argument and so self.create_maps must be run separately
+            than with self.get_is_cv_values and self.get_weight_prime. If no seed is
+            passed, a random one will be created.
         memory (default 'medium') - Either 'low', 'medium', 'large' or `max. Determines
             what is saved. If `max`, save everything. If `large, don't save self.xs
             and self.is_jac. If 'medium', additionally don't save self.weight_value and
@@ -195,7 +193,7 @@ class CVIntegrator:
         if isinstance(self.cv_means, Number):
             self.cv_means = self.num_cvs * [cv_means]
 
-        self.rng = RandomState() if rng is None else rng
+        self.rng_seed = np.random.randint(0, 1e9) if rng_seed is None else rng_seed
         self.memory = memory
 
     def _init_results(self):
@@ -221,13 +219,16 @@ class CVIntegrator:
 
         # Do this if there actually are CVs, otherwise you don't need to
         if self.cv_nitn:
+            # Run integrator for number of iterations until we reach first CV
             result = integrator(
                 self.function._f, nitn=self.cv_nitn[0], neval=self.map_neval
             )
+            # Save map for CV
             self._cv_maps.append(deepcopy(integrator.map))
             self.tot_neval += int(result.sum_neval)
             # For loop if there is more than 1 CV to save the others
             for cv_nitn_diff in np.diff(self.cv_nitn):
+                # Same process as before
                 result = integrator(
                     self.function._f, nitn=cv_nitn_diff, neval=self.map_neval
                 )
@@ -251,7 +252,7 @@ class CVIntegrator:
     @timing(active=TIMING)
     def get_is_cv_values(self, jac_neval: Optional[int] = None) -> None:
         """
-        Calculates the  adapted function and the control variates from their maps.
+        Calculates the adapted function and the control variates from their maps.
 
         Parameters:
         jac_neval (default None) - The number of steps to split up `ys`, the unit
@@ -259,9 +260,10 @@ class CVIntegrator:
             iterations used when adapting the map.
         """
         self.jac_neval = self.neval * self.nitn if jac_neval is None else jac_neval
+        rng = RandomState(self.rng_seed)
 
         # Uniformly distributed unit hypercube
-        ys = self.rng.uniform(0, 1, (self.jac_neval, self.function.dim))
+        ys = rng.uniform(0, 1, (self.jac_neval, self.function.dim))
         # Find the Jacobian. If by importance sampling we transform f -> f/p, then
         # the Jacobian is 1/p
         xs = np.empty(ys.shape, float)
