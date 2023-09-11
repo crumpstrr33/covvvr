@@ -105,10 +105,12 @@ class CVIntegrator:
             map.
     """
 
-    # Should you print out the time it takes for the main 3 functions to run?
+    # Should you print out the time it takes for the main functions to run?
     TIMING = False
     # Memory threshold for when `memory="tiny"`
     TINY_THRESHOLD = 100
+    # Integer code for the 'auto1' option of cv_iters
+    AUTO1 = [1e15]
 
     def __init__(
         self,
@@ -141,6 +143,8 @@ class CVIntegrator:
                     and cv_iters='all%2', then it uses [2, 4, 6, 8]
                 - 'all%n+b': Use every iteration (shifted by b) mod n. For example, if
                     tot_iters=10 and cv_iters='all%2+1', then use [1, 3, 5, 7, 9]
+                - 'auto1': Will automatically assign a single CV by testing each
+                    possibility with a small number of events
         cv_means (default 1) - The value of E[g_i] but by the scheme laid out in
             `get_is_cv_values` to obtain the control variate, E[g_i] should be
             approximately one.
@@ -157,6 +161,9 @@ class CVIntegrator:
         """
         # Initialize private attributes for the properties
         self._init_results()
+        # Ordering of timing if activated
+        if self.TIMING:
+            self.timing_count = 1
 
         self.function = function
         self.bounds = self.function.dim * [[0, 1]] if bounds is None else bounds
@@ -182,6 +189,8 @@ class CVIntegrator:
                 self.cv_nitn = list(shifted_cv_nitns[shifted_cv_nitns < self.nitn])
             elif self.cv_nitn == "all":
                 self.cv_nitn = list(range(1, self.nitn))
+            elif self.cv_nitn == "auto1":
+                self.cv_nitn = self.AUTO1
 
         # Iteration 0 is no iteration at all, so remove it
         if 0 in self.cv_nitn:
@@ -203,7 +212,9 @@ class CVIntegrator:
                 self.__setattr__(f"_{name}", np.nan)
 
     @timing
-    def create_maps(self, map_neval: Optional[int] = None) -> None:
+    def create_maps(
+        self, map_neval: Optional[int] = None, auto1_neval: Optional[int] = None
+    ) -> None:
         """
         Creates the maps corresponding to the adapted function, f, and the
         control variates, g_i.
@@ -211,14 +222,45 @@ class CVIntegrator:
         Parameters:
         map_neval (default None) - The number of evaluations per iteration as
             the maps are being created. Defaults to `self.neval`.
+        auto1_neval (defaut None) - Only used if `cv_iters` was set to 'auto1'.
+            The number of iterations to use for the testing of each CV. Defaults
+            to the value of `self.map_neval`.
         """
         self.map_neval = self.neval if map_neval is None else map_neval
         integrator = Integrator(self.bounds)
         self._cv_maps = []
         self.tot_neval = 0
 
-        # Do this if there actually are CVs, otherwise you don't need to
-        if self.cv_nitn:
+        # Will adapt maps as usual, but then test each map as a single CV with
+        # `auto1_neval` events to get an estimate of which CV is best to use
+        if self.cv_nitn == self.AUTO1:
+            auto1_neval = self.map_neval if auto1_neval is None else auto1_neval
+            # Run for a smaller number of points for every possibility
+            self._tmp_cv_maps = []
+            # Copy every map iteration
+            for nitn in range(self.nitn - 1):
+                result = integrator(self.function._f, nitn=1, neval=self.map_neval)
+                self._tmp_cv_maps.append(deepcopy(integrator.map))
+                self.tot_neval += int(result.sum_neval)
+
+            result = integrator(self.function._f, nitn=1, neval=self.map_neval)
+            self._is_map = deepcopy(integrator.map)
+            self.tot_neval += int(result.sum_neval)
+
+            # Run through each map and see what the VRP is
+            vrps = []
+            for ind, cv_map in enumerate(self._tmp_cv_maps):
+                self._cv_maps = [cv_map]
+
+                self.get_is_cv_values(jac_neval=auto1_neval)
+                self.get_weight_prime(constant=True)
+                vrps.append(self.vrp)
+            # Find which index/map gives the maximum VRP and use that
+            max_vrp_ind = np.argmax(vrps)
+            self.cv_nitn = [max_vrp_ind + 1]
+            self._cv_maps = [self._tmp_cv_maps[max_vrp_ind]]
+        # Will adapt maps until a CV is reached and save that CV and keep going
+        elif self.cv_nitn:
             # Run integrator for number of iterations until we reach first CV
             result = integrator(
                 self.function._f, nitn=self.cv_nitn[0], neval=self.map_neval
@@ -243,6 +285,7 @@ class CVIntegrator:
             )
             self._is_map = deepcopy(integrator.map)
             self.tot_neval += int(result.sum_neval)
+        # This option is for no CVs, so don't save any for the CV
         else:
             # Only have an IS map if there are no CVs
             result = integrator(self.function._f, nitn=self.nitn, neval=self.map_neval)
@@ -259,8 +302,8 @@ class CVIntegrator:
             hypercube, into. Defaults to `self.tot_neval`, the total number of
             iterations used when adapting the map.
         """
-        self.jac_neval = self.neval * self.nitn if jac_neval is None else jac_neval
-        rng = RandomState(self.rng_seed)
+        self.jac_neval = self.tot_neval if jac_neval is None else jac_neval
+        rng = RandomState(seed=self.rng_seed)
 
         # Uniformly distributed unit hypercube
         ys = rng.uniform(0, 1, (self.jac_neval, self.function.dim))
@@ -378,10 +421,12 @@ class CVIntegrator:
         ) / (self.jac_neval - 1) ** 2
         return cov
 
+    @timing
     def integrate(
         self,
         map_neval: Optional[int] = None,
         jac_neval: Optional[int] = None,
+        auto1_neval: Optional[int] = None,
         constant: bool = True,
     ) -> None:
         """
@@ -398,6 +443,9 @@ class CVIntegrator:
         jac_neval (default None) - From self.get_is_cv_values docstring: The number of
             steps to split up `ys`, the unit hypercube, into. Defaults to
             `self.tot_neval`, the total number of iterations used when adapting the map.
+        auto1_neval (defaut None) - Only used if `cv_iters` was set to 'auto1'.
+            The number of iterations to use for the testing of each CV. Defaults
+            to the value of `self.map_neval`.
         constant (default True) - From self.get_weight_primes: Since the ith value of a
             control variate can be slightly correlated to its coefficient, we can remove
             said value to calculate the variance/covariance (and therefore the
@@ -405,13 +453,14 @@ class CVIntegrator:
             each value. This is so if `constant=True`. If `constant=False`, just do a
             single coefficient per CV.
         """
-        self.create_maps(map_neval=map_neval)
+        self.create_maps(map_neval=map_neval, auto1_neval=auto1_neval)
         self.get_is_cv_values(jac_neval=jac_neval)
         if self.cv_values:
             # only run if we are using control variates
             self.get_weight_prime(constant=constant)
         self.garbage_collect()
 
+    @timing
     def garbage_collect(self, memory: Optional[str] = None) -> None:
         """
         Deletes attributes depending on choices of self.memory to clear up memory.
