@@ -99,9 +99,9 @@ VPR      |             |   16.02309%
 The reason the function is vectorized is because, on the backend, `vegas`'s `batchintegrand` is used which can greatly speed up the computation.
 
 ### Be lazy!
-If you're rushed or lazy, you can use the `quick_integrate` function that does the steps above for you and returns the `CVIntegrator` object. So to run the previous code block, you would use
+If you're rushed or lazy, you can use the `classic_integrate` function that does the steps above for you and returns the `CVIntegrator` object. So to run the previous code block, you would use
 ```python
-cvi = quick_integrate(
+cvi = classic_integrate(
          function=f,
          evals=1000,
          tot_iters=50,
@@ -131,6 +131,7 @@ There are multiple valid arguments that can be passed to `cv_iters` for both the
 - The string 'all' will use every iteration.
 - The string `all%n` will use every iteration mod $n$. So if you specify `tot_iters=15` and `cv_iters='all%3'`, then then the iterations used will be `[3, 6, 9, 12]`
 - This can be shifted by instead using `all%n+b` where $b$ is the shift. So for `tot_iters=15` and `cv_iters='all%3+2'`, you'll get `[2, 5, 8, 11, 14]`.
+- The string 'auto1' will estimate the best single CV to use by sampling each possibility using `auto1_neval1` samples specified by the user.
 
 ### Manual Use of `Function` Class
 To access the function call, use `function` or `f`. So, using the second example, I can run
