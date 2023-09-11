@@ -10,9 +10,14 @@ def timing(func):
             dt0 = dt.now()
             output = func(self, *args, **kwargs)
             dt1 = dt.now()
+
             tot_time = (dt1 - dt0).total_seconds()
             fname = func.__name__
-            print(f"{fname} {'-' * (30 - len(fname))} {tot_time:.5f}s")
+            print(
+                f"{self.timing_count:>4}: {fname} "
+                + f"{'-' * (50 - len(fname))} {tot_time:.3f}s"
+            )
+            self.timing_count += 1
         else:
             output = func(self, *args, **kwargs)
 
