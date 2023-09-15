@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "covvvr"
-version = "1.4.0"
+version = "1.4.1"
 description = "COntrol Variate & Vegas Variance Reduction package for Monte Carlo integration."
 authors = [
     {name = "Jacob Scott", email = "jscott137@pm.me"}
