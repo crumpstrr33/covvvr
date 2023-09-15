@@ -1,5 +1,7 @@
 """
-File that holds the a version of the CVIntegrator class for granule timing.
+File that holds the a version of the CVIntegrator class for granule timing. Don't take
+this too seriously nor consider it even good coding practice. It was the simpliest way
+to do thi :^)
 """
 from copy import deepcopy
 from datetime import datetime as dt
@@ -176,10 +178,10 @@ class CVITime(CVIntegrator):
         return timing_info
 
     @timing
-    def get_weight_prime(self, constant: bool = True) -> None:
+    def get_weight_prime(self) -> None:
         timing_info = []
         dt0 = dt.now()
-        coeff_timing_info = self._find_coefficients(constant=constant)
+        coeff_timing_info = self._find_coefficients()
         dt1 = dt.now()
         timing_info.append(["Find coefficient(s)", (dt1 - dt0).total_seconds()])
         timing_info += coeff_timing_info
@@ -193,62 +195,24 @@ class CVITime(CVIntegrator):
         timing_info.append(["Calculate final values", (dt2 - dt1).total_seconds()])
         return timing_info
 
-    def _find_coefficients(self, constant: bool) -> None:
+    def _find_coefficients(self) -> None:
         timing_info = []
-        # Create (num_cv, num_cv) matrix
-        if constant:
-            Bs = np.zeros((self.num_cvs, self.num_cvs))
-        else:
-            Bs = np.zeros((self.num_cvs, self.num_cvs, self.jac_neval))
 
         # Populate the B matrix
         dt0 = dt.now()
-        for i, j in product(range(self.num_cvs), repeat=2):
-            Bs[i, j] = self._cov(
-                self.cv_values[i], self.cv_values[j], constant=constant
-            )
+        Bs = np.cov(self.cv_values)
         dt1 = dt.now()
         timing_info.append(["Build B", (dt1 - dt0).total_seconds(), 2])
-        As = np.array(
-            [
-                -self._cov(self.weight_value, cv_value, constant=constant)
-                for cv_value in self.cv_values
-            ]
-        )
+        As = np.array([-np.cov(self.weight_value, cv)[0, 1] for cv in self.cv_values])
         dt2 = dt.now()
         timing_info.append(["Build A", (dt2 - dt1).total_seconds(), 2])
 
-        # Solve the system of equations for each index
-        if constant:
-            cs = np.linalg.solve(Bs, As)
-        else:
-            cs = np.array(
-                [
-                    np.linalg.solve(Bs[:, :, ind], As[:, ind])
-                    for ind in range(self.jac_neval)
-                ]
-            )
+        # Solve the system of equations
+        cs = np.linalg.solve(Bs, As)
         self.cs = cs.T
         dt3 = dt.now()
         timing_info.append(["Solve inverse", (dt3 - dt2).total_seconds(), 2])
         return timing_info
-
-    def _cov(
-        self,
-        f1: NDArray[Shape["'*'"], Float],
-        f2: NDArray[Shape["'*'"], Float],
-        constant: bool,
-    ) -> Union[float, NDArray[Shape["'*'"], Float]]:
-        if constant:
-            return np.cov(f1, f2)[0, 1]
-
-        prod = f1 * f2
-        # For each index, calculate the covariance without the value
-        # for said index to remove that bias otherwise E[x_prime] =/= E[x]
-        cov = (np.sum(prod) - prod) / (self.jac_neval - 1) - (np.sum(f1) - f1) * (
-            np.sum(f2) - f2
-        ) / (self.jac_neval - 1) ** 2
-        return cov
 
     @staticmethod
     def _time_print(title, time, ind_level=1):
@@ -265,7 +229,6 @@ class CVITime(CVIntegrator):
         map_neval: Optional[int] = None,
         jac_neval: Optional[int] = None,
         auto1_neval: Optional[int] = None,
-        constant: bool = True,
     ) -> None:
         self._times_print(
             self.create_maps(map_neval=map_neval, auto1_neval=auto1_neval)
@@ -273,7 +236,7 @@ class CVITime(CVIntegrator):
         self._times_print(self.get_is_cv_values(jac_neval=jac_neval))
         if self.cv_values:
             # only run if we are using control variates
-            self._times_print(self.get_weight_prime(constant=constant))
+            self._times_print(self.get_weight_prime())
         self.garbage_collect()
 
     @property

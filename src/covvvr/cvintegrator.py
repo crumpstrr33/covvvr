@@ -331,7 +331,7 @@ class CVIntegrator:
             self.is_jac = is_jac
 
     @timing
-    def get_weight_prime(self, constant: bool = True) -> None:
+    def get_weight_prime(self) -> None:
         """
         Calculates the final CV function by finding the optimal coefficients
         for the control variates.
@@ -342,7 +342,7 @@ class CVIntegrator:
             faster. If `False`, then calculate a different coefficient for each element.
             Explained in more detail in the `self._find_coefficients` docstring.
         """
-        self._find_coefficients(constant=constant)
+        self._find_coefficients()
         self.weight_prime = self.weight_value + sum(
             [
                 self.cs[ind] * (self.cv_values[ind] - self.cv_means[ind])
@@ -350,76 +350,26 @@ class CVIntegrator:
             ]
         )
 
-    def _find_coefficients(self, constant: bool) -> None:
+    def _find_coefficients(self) -> None:
         """
         Finds the optimized values for the CV coefficients to minimize the variance via
         a matrix. Our equation to solve is of the form A=Bc where A and c are arrays and
         B is a matrix. We solve for c.
 
-        Parameters:
-        constant (default True) - Since the ith value of a control variate can be
-            slightly correlated to its coefficient, we can remove said value to
-            calculate the variance/covariance (and therefore the coefficient). Thus we
-            can have different values (albeit similar ones) for each value. This is so
-            if `constant=True`. If `constant=False`, only do single coefficient per CV.
+        The ith value of a control variate can be correlated to its coefficient, so
+        removing said value when calculating the covariance would remove this
+        correlation while still maintaining a good approximation of it. In effect,
+        this would look like a covariance for each ith point. But this subtlety does
+        not have a noticeable effect on the result but slows down the algorithm by
+        multiple times so it isn't done.
         """
-        # Create (num_cv, num_cv) matrix
-        if constant:
-            Bs = np.zeros((self.num_cvs, self.num_cvs))
-        else:
-            Bs = np.zeros((self.num_cvs, self.num_cvs, self.jac_neval))
-
         # Populate the B matrix
-        for i, j in product(range(self.num_cvs), repeat=2):
-            Bs[i, j] = self._cov(
-                self.cv_values[i], self.cv_values[j], constant=constant
-            )
-        As = np.array(
-            [
-                -self._cov(self.weight_value, cv_value, constant=constant)
-                for cv_value in self.cv_values
-            ]
-        )
+        Bs = np.cov(self.cv_values)
+        As = np.array([-np.cov(self.weight_value, cv)[0, 1] for cv in self.cv_values])
 
-        # Solve the system of equations for each index
-        if constant:
-            cs = np.linalg.solve(Bs, As)
-        else:
-            cs = np.array(
-                [
-                    np.linalg.solve(Bs[:, :, ind], As[:, ind])
-                    for ind in range(self.jac_neval)
-                ]
-            )
+        # Solve the system of equations
+        cs = np.linalg.solve(Bs, As)
         self.cs = cs.T
-
-    def _cov(
-        self,
-        f1: NDArray[Shape["'*'"], Float],
-        f2: NDArray[Shape["'*'"], Float],
-        constant: bool,
-    ) -> Union[float, NDArray[Shape["'*'"], Float]]:
-        """
-        Calculates the covariance between `f1` and `f2`.
-
-        If `constant` is `False`: for each element of the array returned, the covariance
-        is calculated with said element of `f1` and `f2` removed. This removes the
-        potential correlation between the CV and its coefficient so that when
-        calculating the expectation value of f', we can act linearly with
-        E[c(g-E(g))]=0.
-
-        If `constant` is `True`: return a single covariance.
-        """
-        if constant:
-            return np.cov(f1, f2)[0, 1]
-
-        prod = f1 * f2
-        # For each index, calculate the covariance without the value
-        # for said index to remove that bias otherwise E[x_prime] =/= E[x]
-        cov = (np.sum(prod) - prod) / (self.jac_neval - 1) - (np.sum(f1) - f1) * (
-            np.sum(f2) - f2
-        ) / (self.jac_neval - 1) ** 2
-        return cov
 
     @timing
     def integrate(
@@ -427,7 +377,6 @@ class CVIntegrator:
         map_neval: Optional[int] = None,
         jac_neval: Optional[int] = None,
         auto1_neval: Optional[int] = None,
-        constant: bool = True,
     ) -> None:
         """
         Runs the necessary functions to integrate the function in the order:
@@ -446,18 +395,12 @@ class CVIntegrator:
         auto1_neval (defaut None) - Only used if `cv_iters` was set to 'auto1'.
             The number of iterations to use for the testing of each CV. Defaults
             to the value of `self.map_neval`.
-        constant (default True) - From self.get_weight_primes: Since the ith value of a
-            control variate can be slightly correlated to its coefficient, we can remove
-            said value to calculate the variance/covariance (and therefore the
-            coefficient). Thus we can have different values (albeit similar ones) for
-            each value. This is so if `constant=True`. If `constant=False`, just do a
-            single coefficient per CV.
         """
         self.create_maps(map_neval=map_neval, auto1_neval=auto1_neval)
         self.get_is_cv_values(jac_neval=jac_neval)
         if self.cv_values:
             # only run if we are using control variates
-            self.get_weight_prime(constant=constant)
+            self.get_weight_prime()
         self.garbage_collect()
 
     @timing
