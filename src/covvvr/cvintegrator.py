@@ -253,7 +253,7 @@ class CVIntegrator:
                 self._cv_maps = [cv_map]
 
                 self.get_is_cv_values(jac_neval=auto1_neval)
-                self.get_weight_prime(constant=True)
+                self.get_weight_prime()
                 vrps.append(self.vrp)
             # Find which index/map gives the maximum VRP and use that
             max_vrp_ind = np.argmax(vrps)
@@ -335,12 +335,6 @@ class CVIntegrator:
         """
         Calculates the final CV function by finding the optimal coefficients
         for the control variates.
-
-        Parameters:
-        constant - If `True`, then the N optimal coefficients (for N CVs) will be
-            constant for every `self.jac_neval` values in each function. This is much
-            faster. If `False`, then calculate a different coefficient for each element.
-            Explained in more detail in the `self._find_coefficients` docstring.
         """
         self._find_coefficients()
         self.weight_prime = self.weight_value + sum(
@@ -367,6 +361,9 @@ class CVIntegrator:
         Bs = np.cov(self.cv_values)
         As = np.array([-np.cov(self.weight_value, cv)[0, 1] for cv in self.cv_values])
 
+        # np.cov returns 0D array if there's only one element, so turn it into a matrix
+        if self.num_cvs == 1:
+            Bs = Bs.reshape(1, 1)
         # Solve the system of equations
         cs = np.linalg.solve(Bs, As)
         self.cs = cs.T
