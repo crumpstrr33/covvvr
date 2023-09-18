@@ -98,6 +98,8 @@ VPR      |             |   16.02309%
 ```
 The reason the function is vectorized is because, on the backend, `vegas`'s `batchintegrand` is used which can greatly speed up the computation.
 
+The optional `true_value` argument can also be passed to `make_func`. This is useful if one needs to keep track of the integral value which may change based on parameter values. It can either be passed to `make_func` as a float or as a callable function that takes as it's arguments the parameters passed to `make_func`. For the above example, one could define the function `def true_value(a, b): ...` and pass `true_value` to `make_func`.
+
 ### Be lazy!
 If you're rushed or lazy, you can use the `classic_integrate` function that does the steps above for you and returns the `CVIntegrator` object. So to run the previous code block, you would use
 ```python
@@ -131,7 +133,7 @@ There are multiple valid arguments that can be passed to `cv_iters` for both the
 - The string 'all' will use every iteration.
 - The string `all%n` will use every iteration mod $n$. So if you specify `tot_iters=15` and `cv_iters='all%3'`, then then the iterations used will be `[3, 6, 9, 12]`
 - This can be shifted by instead using `all%n+b` where $b$ is the shift. So for `tot_iters=15` and `cv_iters='all%3+2'`, you'll get `[2, 5, 8, 11, 14]`.
-- The string 'auto1' will estimate the best single CV to use by sampling each possibility using `auto1_neval1` samples specified by the user.
+- The string 'auto1' will estimate the best single CV to use by sampling each possibility using `auto1_neval1` samples specified by the user. To use, after initializing the class object with `cv_iters='auto1'`, one can pass an integer for `auto1_neval` specifying how many points should be used when calculating the control variate and importance sampling values. It defaults to `map_neval` (which defaults to the value passed to `neval`). For comparision, when the actual integration is done, that defaults to the total number of evaluations needed to adapt the maps which is less than `neval`*`tot_iters`.
 
 ### Manual Use of `Function` Class
 To access the function call, use `function` or `f`. So, using the second example, I can run
