@@ -5,11 +5,9 @@ to do thi :^)
 """
 from copy import deepcopy
 from datetime import datetime as dt
-from itertools import product
 from typing import Optional, Sequence, Union
 
 import numpy as np
-from nptyping import Float, NDArray, Shape
 from numpy.random import RandomState
 from vegas import Integrator
 
@@ -85,7 +83,6 @@ class CVITime(CVIntegrator):
                 vrps.append(self.vrp)
             # Find which index/map gives the maximum VRP and use that
             max_vrp_ind = np.argmax(vrps)
-            print(vrps)
             self.cv_nitn = [max_vrp_ind + 1]
             self._cv_maps = [self._tmp_cv_maps[max_vrp_ind]]
         elif self.cv_nitn:
@@ -207,6 +204,9 @@ class CVITime(CVIntegrator):
         dt2 = dt.now()
         timing_info.append(["Build A", (dt2 - dt1).total_seconds(), 2])
 
+        # np.cov returns 0D array if there's only one element, so turn it into a matrix
+        if self.num_cvs == 1:
+            Bs = Bs.reshape(1, 1)
         # Solve the system of equations
         cs = np.linalg.solve(Bs, As)
         self.cs = cs.T
