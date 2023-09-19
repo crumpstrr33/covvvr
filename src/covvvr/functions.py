@@ -23,7 +23,7 @@ All functions are to be integrated from 0 to 1.
 from dataclasses import dataclass, field, fields, make_dataclass
 from math import erf
 from numbers import Number
-from typing import Optional, Sequence, Union
+from typing import Callable, Optional, Sequence, Union
 
 import numpy as np
 from vegas import batchintegrand
@@ -32,7 +32,6 @@ from ._exceptions import ParameterBoundError
 from ._types import _f, _ftype, _x
 
 
-# TODO: add getters and setters?
 @dataclass(repr=False)
 class Function:
     """
@@ -97,6 +96,7 @@ def make_func(
     cname: str,
     dimension: int,
     function: _ftype,
+    true_value: Union[float, Callable] = None,
     name: Optional[str] = None,
     **params: float,
 ) -> Function:
@@ -127,7 +127,10 @@ def make_func(
     Parameters:
     cname - The class name
     dimension - The dimension of the integral
-    f - The function, must be vectorized. See above.
+    function - The function, must be vectorized. See above.
+    true_value (default None) - The value of the integral. Can be passed either as a
+        number, e.g. float, or as a callable function that takes as its arguments the
+        parameters passed in the kwargs `params`.
     name (default None) - The spaced, capitalized name for the function. If not given,
         will just use whatever `cname` is.
     params - Function parameters
@@ -141,10 +144,11 @@ def make_func(
     fields = [(param, float, field(default=val)) for param, val in params.items()]
 
     # Create Function class then added new stuff
-    func = Function(
-        name=name,
-        dimension=dimension,
-    )
+    if isinstance(true_value, Callable):
+        tv = true_value(**params)
+    else:
+        tv = true_value
+    func = Function(name=name, dimension=dimension, true_value=tv)
     func.__class__ = make_dataclass(
         cname,
         fields=fields,

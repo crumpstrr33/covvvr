@@ -3,14 +3,12 @@ File that holds the CVIntegrator class
 """
 
 from copy import deepcopy
-from itertools import product
 from numbers import Number
 from re import findall
 from sys import getsizeof
 from typing import Optional, Sequence, Union
 
 import numpy as np
-from nptyping import Float, NDArray, Shape
 from numpy.random import RandomState
 from vegas import Integrator
 
