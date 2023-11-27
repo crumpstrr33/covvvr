@@ -7,7 +7,7 @@ name = "covvvr"
 version = "1.4.1"
 description = "COntrol Variate & Vegas Variance Reduction package for Monte Carlo integration."
 authors = [
-    {name = "Jacob Scott", email = "jscott137@pm.me"}
+    {name = "Jacob Scott", email = "jscott128@pm.me"}
 ]
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.9"
