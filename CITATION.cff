@@ -7,7 +7,7 @@ type: software
 authors:
   - given-names: Jacob
     family-names: Scott
-    email: jscott128@pm.me
+    email: jscott128@tuta.io
     affiliation: University of Kansas
 repository-code: 'https://github.com/crumpstrr33/covvvr'
 abstract: >-
